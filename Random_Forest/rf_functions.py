@@ -24,7 +24,6 @@ def rf_train_and_fit(X, y, cv_split, param_grid, scoring_criterium):
     print('The parameters to test are: ', param_grid, '\n')
     #'The cross validation score is : ', grid_search.best_score_, '\n'
     #'The best parameters are: ', grid_search.best_params_)
-    
 
     #Fitting the model
     grid_search.fit(X, y)

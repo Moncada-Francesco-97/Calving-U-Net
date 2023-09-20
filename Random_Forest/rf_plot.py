@@ -13,6 +13,8 @@ def plot_gsearch_results(grid, save_dir=None, save_filename=None):
     """
     Params: 
         grid: A fitted GridSearchCV object. It should include no criterium
+        save_dir: The directory where the plot will be saved
+        save_filename: The filename of the plot
     """
     ## Results from grid search
     results = grid.cv_results_
@@ -81,4 +83,66 @@ test
 Output: array([ True, False, False])
 '''
     
-    
+def plot_feature_importance(fitted_rf, X, variables_new = None, save_dir=None):
+
+    '''Parameters:
+    fitted_rf: the fitted random forest
+    X: the features
+    variables_new: potentially the new variables we will use: otherwise we use bm, i_c, i_v, i_t
+    save_dir: the directory where the plot will be saved'''
+
+
+
+    #First graph
+    feature_importance = fitted_rf.feature_importances_
+    sorted_idx = np.argsort(feature_importance) #is sorting the columns
+    pos = np.arange(sorted_idx.shape[0]) + 0.5 #just for the graphic
+    fig = plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.barh(pos, feature_importance[sorted_idx], align="center")
+    plt.yticks(pos, np.array(X.columns)[sorted_idx])
+    plt.title("Feature Importance (MDI)")
+
+    #Saving the plot
+    if save_dir:
+        save_path = os.path.join(save_dir, 'feature_importance.png')
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Plot saved to {save_path}")
+    else:
+        plt.show()
+
+    #Second graph, which is the cumulative importance per variable
+    if variables_new:
+        var_feat = variables_new
+    else:
+
+        variables_dataset = X.columns.droplevel(1)
+        var_feat =['bm', 'i_c', 'i_v', 'i_t']
+        df = pd.DataFrame(index=var_feat,columns=['importance'])
+        df['importance'] = 0
+
+        for i, variable in enumerate(variables_dataset):
+
+            df.loc[str(variable), 'importance'] = df.loc[str(variable),'importance'] + feature_importance[i]
+        
+        df.plot.bar(
+        figsize=(10, 5),
+        title='Feature Importance according to Random Forest',
+        legend=False,
+        grid=True,
+        fontsize=12,
+        rot=0,
+        color='royalblue'
+        )
+        #add the y label
+        plt.ylabel('Cumulative Importance per variable', fontsize=12)
+
+
+        if save_dir:
+            save_path = os.path.join(save_dir, 'feature_importance_per_variable.png')
+
+            plt.savefig(save_path, bbox_inches='tight')
+            print(f"Plot saved to {save_path}")
+
+        else:
+            plt.show()
