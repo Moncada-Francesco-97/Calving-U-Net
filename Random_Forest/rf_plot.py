@@ -9,7 +9,7 @@ import sklearn
 
 
 
-def plot_gsearch_results(grid):
+def plot_gsearch_results(grid, save_dir=None, save_filename=None):
     """
     Params: 
         grid: A fitted GridSearchCV object. It should include no criterium
@@ -56,7 +56,17 @@ def plot_gsearch_results(grid):
         ax[i].grid()
 
     plt.legend()
-    plt.show()
+
+    # Save the plot if save_dir and save_filename are provided
+    if save_dir and save_filename:
+        save_path = os.path.join(save_dir, save_filename)
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Plot saved to {save_path}")
+    else:
+        plt.show()
+
+    plt.close()  # Close the plot to free up resources
+
 
 ''' Check the function all() in numpy
 
