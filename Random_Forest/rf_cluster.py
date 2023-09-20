@@ -37,7 +37,6 @@ shapefile_path = '/bettik/moncadaf/data/shapefiles_antarctica/ice_shelf.shp'
 ids = []
 Names = []
 regions = []
-areas = []
 lats = []
 lons = []
 
@@ -48,7 +47,6 @@ for feature in shapefile:
 
     id = feature['properties']['id']
     name=feature['properties']['name']
-    area=feature['properties']['area_fra']
     lat = feature['properties']['latitude']
     lon = feature['properties']['longitude']
     geometry=feature['geometry']
@@ -60,7 +58,6 @@ for feature in shapefile:
     ids.append(id)
     Names.append(name)
     regions.append(region)
-    areas.append(area)
     lats.append(lat)
     lons.append(lon)
 
@@ -69,7 +66,6 @@ df_region = pd.DataFrame(index=ids)
 df_region ['id'] = ids
 df_region ['Name'] = Names
 df_region ['Region'] = regions
-df_region ['Area'] = areas
 df_region ['Latitude'] = lats
 df_region ['Longitude'] = lons
 
