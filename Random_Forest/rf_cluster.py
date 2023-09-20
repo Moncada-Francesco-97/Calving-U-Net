@@ -216,4 +216,12 @@ print('The std of the cross validation is: ', np.std(cvl))
 importlib.reload(rf_plot)  # Reload the module
 from rf_plot import plot_gsearch_results
 
-plot_gsearch_results(rf_trained, save_dir='/bettik/moncadaf/data/outputs/machine_learning_calving_project/Random_Forest', save_filename='gsearch_results.png')
+save_dir='/bettik/moncadaf/data/outputs/machine_learning_calving_project/Random_Forest'
+
+plot_gsearch_results(rf_trained, save_dir= save_dir, save_filename='gsearch_results.png')
+
+#Plot the feature importance
+importlib.reload(rf_plot)  # Reload the module
+from rf_plot import plot_feature_importance
+
+plot_feature_importance(fitted_rf, X, save_dir=save_dir)
