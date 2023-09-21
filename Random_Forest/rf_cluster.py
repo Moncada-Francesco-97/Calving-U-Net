@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from itertools import chain
 import pandas as pd
 import xarray as xr
 import os
@@ -28,8 +29,6 @@ with open('/bettik/moncadaf/data' + '/selecao.txt', 'r') as f:
 common_years = np.arange(2005,2017,1)
 
 print('The shape of the selection is: ', np.shape(selection))
-
-
 
 #Extracting the info from the shapefile################
 shapefile_path = '/bettik/moncadaf/data/shapefiles_antarctica/ice_shelf.shp'
@@ -78,8 +77,10 @@ print('I have etracted the info from the shapefile')
 ############################################
 
 
+
+
 #Loading the dataset###############################
-dataset_directory = '/bettik/moncadaf/data/dataset_filtered/'
+dataset_directory = '/Users/francesco/Desktop/Thesis/Data/dataset_filtered/'
 
 # Basal Melting
 bm = pd.read_csv(dataset_directory + '/bm.csv', index_col=0)
@@ -87,13 +88,16 @@ bm = bm.sort_values(by=['id']) #sorting the glaciers by their index
 bm = bm.loc[bm.index.isin(selection)] #selecting the glaciers, according to their index
 bm = bm[common_years.astype(str)] #selecting the common years
 bm = bm.sort_index() #sorting the glaciers by their index
+bm = bm.reset_index(drop=True)
+bm.index = selection
 
 #Load the calving data
 calving = pd.read_csv(dataset_directory+ '/df_calving_from_shp_negative_and_positive.csv', index_col=0)
 calving = calving.loc[calving.index.isin(selection)]
 calving = calving[common_years.astype(str)]
-#sort the calving by its index
 calving = calving.sort_index()
+calving = calving.reset_index(drop=True)
+calving.index = selection
 
 #Load the ice concentration data
 i_c = pd.read_csv(dataset_directory + '/ice_c_avg_extended_front.csv', index_col=0)
@@ -112,21 +116,50 @@ i_t = pd.read_csv(dataset_directory + '/thickness_avg_extended front.csv', index
 i_t = i_t.loc[i_t.index.isin(selection)]
 i_t = i_t[common_years.astype(str)]
 i_t = i_t.sort_index()
-
-index = bm.index
-
-print('I have loaded all the datasets')
 ####################################################
 
 
 
+################Converting the dataset to a matrix################
 
-#make a dataset with all the variables################
-dataset = pd.concat([bm, calving, i_c, i_v, i_t], axis=1, keys=['bm', 'calving', 'i_c', 'i_v', 'i_t'])
-dataset.columns.names = ['Variables', 'Years']
-dataset.index.names = ['Glaciers']
+# The new indexing is (2,2005),(2,2006),(2,2007),...(2,2016),(3,2005)...
 
-#Folder division according to the blocks parameters
+bm_long = pd.melt(bm.reset_index(), id_vars=['index'], var_name='year', value_name='value') 
+bm_long = bm_long.sort_values(by=['index', 'year']).reset_index(drop=True)
+bm_long.drop(['year'], axis=1, inplace=True)
+
+calving_long = pd.melt(calving.reset_index(), id_vars=['index'], var_name='year', value_name='value')
+calving_long = calving_long.sort_values(by=['index', 'year']).reset_index(drop=True)
+calving_long.drop(['year'], axis=1, inplace=True)
+
+i_c_long = pd.melt(i_c.reset_index(), id_vars=['index'], var_name='year', value_name='value')
+i_c_long = i_c_long.sort_values(by=['index', 'year']).reset_index(drop=True)
+i_c_long.drop(['year'], axis=1, inplace=True)
+
+i_v_long = pd.melt(i_v.reset_index(), id_vars=['index'], var_name='year', value_name='value')
+i_v_long = i_v_long.sort_values(by=['index', 'year']).reset_index(drop=True)
+i_v_long.drop(['year'], axis=1, inplace=True)
+
+i_t_long = pd.melt(i_t.reset_index(), id_vars=['index'], var_name='year', value_name='value')
+i_t_long = i_t_long.sort_values(by=['index', 'year']).reset_index(drop=True)
+i_t_long.drop(['year'], axis=1, inplace=True)
+
+index_long = bm_long['index'].values
+
+#Here I merge all the datasets, setting a new index which is [2,2,2,....170,170,170]
+dataset = pd.concat([bm_long, calving_long, i_c_long, i_v_long, i_t_long], axis=1)
+dataset.drop(['index'], axis=1, inplace=True)
+#rename the columns
+dataset.columns = ['bm', 'calving', 'ice_concentration', 'ice_velocity', 'ice_thickness']
+dataset.index = index_long
+######################################################################
+
+
+
+
+########Folder division according to the blocks parameters#############
+
+#train
 folder_1 = [2,4,6,7,8,15,18,16,34,45,135,163,95]
 folder_2 = [3,29,10,12,31,30,19,24,35,50,86,104,139]
 folder_3 = [65,43,37,17,41,32,38,40,36,52,143,146,125]
@@ -136,19 +169,16 @@ folder_6 = [76,80,114,58,48,84,83,66,90,56,140,144,164]
 folder_7 = [88,82,120,61,57,92,85,105,100,73,158,124,169]
 folder_8 = [96,107,121,62,60,127,87,108,102,91,161,122,160]
 
-cv_folders = [folder_1, folder_2, folder_3, folder_4, folder_5, folder_6, folder_7, folder_8]
+#test
+folder_9 = [129,112,156,68,97,132,93,109,115,98,148,166] 
+folder_10 = [131,147,157,72,99,136,116,111,119,110,162,159] 
 
-folder_9 = [129,112,156,68,97,132,93,109,115,98,148,166] #test
-folder_10 = [131,147,157,72,99,136,116,111,119,110,162,159] #test
-
-#merge the folders, in order to have a single list
-from itertools import chain
-
+#Merging the folders
 train = [folder_1, folder_2, folder_3, folder_4, folder_5, folder_6, folder_7, folder_8]
 test = [folder_9, folder_10]
-test = list(chain.from_iterable(test))
+#test = list(chain.from_iterable(test))
 
-#Operate block division
+#Performing block division
 cv_block_1 = dataset.loc[folder_1]
 cv_block_2 = dataset.loc[folder_2]
 cv_block_3 = dataset.loc[folder_3]
@@ -182,7 +212,6 @@ X = cv.drop('calving', axis=1)
 y = cv['calving']
 
 cv_split = KFold(n_splits=8, shuffle=False, random_state=None)
-
 
 rf_trained = rf_train_and_fit(X, y, cv_split, grid, 'neg_mean_squared_error')
 

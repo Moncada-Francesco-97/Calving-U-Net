@@ -83,7 +83,7 @@ test
 Output: array([ True, False, False])
 '''
     
-def plot_feature_importance(fitted_rf, X, variables_new = None, save_dir=None):
+def plot_feature_importance(rf_trained, X, variables_new = None, save_dir=None):
 
     '''Parameters:
     fitted_rf: the fitted random forest
@@ -92,7 +92,11 @@ def plot_feature_importance(fitted_rf, X, variables_new = None, save_dir=None):
     save_dir: the directory where the plot will be saved'''
 
     #First graph
-    best_rf_estimator = fitted_rf.best_estimator_
+
+    #Extract just the variable and not the year from the column
+    best_rf_estimator = rf_trained.best_estimator_
+
+    # Access the feature importances from the best estimator
     feature_importance = best_rf_estimator.feature_importances_
     sorted_idx = np.argsort(feature_importance) #is sorting the columns
     pos = np.arange(sorted_idx.shape[0]) + 0.5 #just for the graphic
@@ -110,38 +114,42 @@ def plot_feature_importance(fitted_rf, X, variables_new = None, save_dir=None):
     else:
         plt.show()
 
+    ''' 
     #Second graph, which is the cumulative importance per variable
-    if variables_new:
+
+    #Just in case i will include other variables
+    if variables_new: 
         var_feat = variables_new
     else:
-
-        variables_dataset = X.columns.droplevel(1)
         var_feat =['bm', 'i_c', 'i_v', 'i_t']
-        df = pd.DataFrame(index=var_feat,columns=['importance'])
-        df['importance'] = 0
 
-        for i, variable in enumerate(variables_dataset):
+    variables_dataset = X.columns.droplevel(1) #just focus on the variablees
+    df = pd.DataFrame(index=var_feat,columns=['importance'])
+    df['importance'] = 0
 
-            df.loc[str(variable), 'importance'] = df.loc[str(variable),'importance'] + feature_importance[i]
+    for i, variable in enumerate(variables_dataset):
+
+        df.loc[str(variable), 'importance'] = df.loc[str(variable),'importance'] + feature_importance[i]
         
-        df.plot.bar(
-        figsize=(10, 5),
-        title='Feature Importance according to Random Forest',
-        legend=False,
-        grid=True,
-        fontsize=12,
-        rot=0,
-        color='royalblue'
-        )
-        #add the y label
-        plt.ylabel('Cumulative Importance per variable', fontsize=12)
+    df.plot.bar(
+    figsize=(10, 5),
+    title='Feature Importance according to Random Forest',
+    legend=False,
+    grid=True,
+    fontsize=12,
+    rot=0,
+    color='royalblue'
+    )
 
+    #add the y label
+    plt.ylabel('Cumulative Importance per variable', fontsize=12)
 
-        if save_dir:
-            save_path = os.path.join(save_dir, 'feature_importance_per_variable.png')
+    if save_dir:
+        save_path = os.path.join(save_dir, 'feature_importance_per_variable.png')
 
-            plt.savefig(save_path, bbox_inches='tight')
-            print(f"Plot saved to {save_path}")
+        plt.savefig(save_path, bbox_inches='tight')
+        print(f"Plot saved to {save_path}")
 
-        else:
-            plt.show()
+    else:
+        plt.show()
+    '''
