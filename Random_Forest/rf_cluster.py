@@ -220,4 +220,4 @@ plot_gsearch_results(rf_trained, save_dir= save_dir, save_filename='gsearch_resu
 importlib.reload(rf_plot)  # Reload the module
 from rf_plot import plot_feature_importance
 
-plot_feature_importance(fitted_rf, X, save_dir=save_dir)
+plot_feature_importance(rf_trained, X, save_dir=save_dir)

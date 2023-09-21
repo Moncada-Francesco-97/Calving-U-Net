@@ -91,10 +91,9 @@ def plot_feature_importance(fitted_rf, X, variables_new = None, save_dir=None):
     variables_new: potentially the new variables we will use: otherwise we use bm, i_c, i_v, i_t
     save_dir: the directory where the plot will be saved'''
 
-
-
     #First graph
-    feature_importance = fitted_rf.feature_importances_
+    best_rf_estimator = fitted_rf.best_estimator_
+    feature_importance = best_rf_estimator.feature_importances_
     sorted_idx = np.argsort(feature_importance) #is sorting the columns
     pos = np.arange(sorted_idx.shape[0]) + 0.5 #just for the graphic
     fig = plt.figure(figsize=(12, 6))
