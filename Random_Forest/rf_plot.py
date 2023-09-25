@@ -7,7 +7,13 @@ import pandas as pd
 import seaborn as sns
 import sklearn
 
+from scipy.stats import gaussian_kde
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error
 
+
+#This function is used to plot the results of the grid search
 
 def plot_gsearch_results(grid, save_dir=None, save_filename=None):
     """
@@ -82,8 +88,10 @@ test
 
 Output: array([ True, False, False])
 '''
-    
-def plot_feature_importance(rf_trained, X, variables_new = None, save_dir=None):
+
+#This function is used to plot the feature importance
+
+def plot_feature_importance(rf_trained, X, variables_new = None, save_dir=None, title = None):
 
     '''Parameters:
     fitted_rf: the fitted random forest
@@ -107,49 +115,62 @@ def plot_feature_importance(rf_trained, X, variables_new = None, save_dir=None):
     plt.title("Feature Importance (MDI)")
 
     #Saving the plot
-    if save_dir:
-        save_path = os.path.join(save_dir, 'feature_importance.png')
+    if save_dir and title:
+        save_path = os.path.join(save_dir, title)
         plt.savefig(save_path, bbox_inches='tight')
         print(f"Plot saved to {save_path}")
     else:
         plt.show()
 
-    ''' 
-    #Second graph, which is the cumulative importance per variable
 
-    #Just in case i will include other variables
-    if variables_new: 
-        var_feat = variables_new
-    else:
-        var_feat =['bm', 'i_c', 'i_v', 'i_t']
+#This function is used to plot the results of the model evaluation
+#It is a scatter plot of the observed vs the predicted values, with the RMSE, R2 and MSE
 
-    variables_dataset = X.columns.droplevel(1) #just focus on the variablees
-    df = pd.DataFrame(index=var_feat,columns=['importance'])
-    df['importance'] = 0
+def plot_results(y_data, y_modeled, save_dir=None, title = None, axis_lim = None):
 
-    for i, variable in enumerate(variables_dataset):
+    '''Parameters:
+    y_data: the observed data
+    y_modeled: the modeled data
+    save_dir: the directory where the plot will be saved
+    axis_lim: the axis limit for the plot'''
 
-        df.loc[str(variable), 'importance'] = df.loc[str(variable),'importance'] + feature_importance[i]
-        
-    df.plot.bar(
-    figsize=(10, 5),
-    title='Feature Importance according to Random Forest',
-    legend=False,
-    grid=True,
-    fontsize=12,
-    rot=0,
-    color='royalblue'
-    )
+    y_data = y_data.values
 
-    #add the y label
-    plt.ylabel('Cumulative Importance per variable', fontsize=12)
+    xy = np.vstack([y_data,y_modeled])
+    z = gaussian_kde(xy)(xy)
 
-    if save_dir:
-        save_path = os.path.join(save_dir, 'feature_importance_per_variable.png')
+    idx = z.argsort()
+    ann_plt, y_plt, z = y_data[idx], y_modeled[idx], z[idx]
 
+    fig, ax = plt.subplots()
+    plt.title("Model Evaluation ")
+
+    plt.xlabel('y predicted')
+    plt.ylabel('y observed')
+    sc = plt.scatter(ann_plt, y_plt, c=z, s=5)
+
+    textstr = '\n'.join((
+        r'$RMSE=%.2f$' % (mean_squared_error(y_data, y_modeled, squared=False), ),
+        r'$R^2=%.2f$' % (r2_score(y_data, y_modeled), ),
+        r'$MSE=%.2f$' % (mean_squared_error(y_data, y_modeled), )))
+    props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
+            verticalalignment='top', bbox=props)
+
+    #Now i want to plot the line y = x
+    x = np.linspace(*ax.get_xlim())
+    ax.plot(x, x, color='black', linestyle='--')
+
+    if axis_lim is not None:
+        plt.xlim(-axis_lim, axis_lim)
+        plt.ylim(-axis_lim, axis_lim)
+
+    #Add a grid
+    plt.grid(True, linestyle='--', linewidth=0.5)
+
+    if save_dir and title:
+        save_path = os.path.join(save_dir, title)
         plt.savefig(save_path, bbox_inches='tight')
         print(f"Plot saved to {save_path}")
 
-    else:
-        plt.show()
-    '''
+    plt.show()

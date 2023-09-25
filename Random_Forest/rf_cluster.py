@@ -80,7 +80,7 @@ print('I have etracted the info from the shapefile')
 
 
 #Loading the dataset###############################
-dataset_directory = '/Users/francesco/Desktop/Thesis/Data/dataset_filtered/'
+dataset_directory = '/bettik/moncadaf/data/dataset_filtered/'
 
 # Basal Melting
 bm = pd.read_csv(dataset_directory + '/bm.csv', index_col=0)
@@ -196,7 +196,7 @@ cv = pd.concat(cv_blocks)
 
 
 
-#Grid Search and Cross Validation#######################
+#####################Grid Search and Cross Validation#######################
 importlib.reload(rf_functions)  # Reload the module
 from rf_functions import rf_train_and_fit
 
@@ -222,7 +222,7 @@ print('The best max_depth is: ', rf_trained.best_params_['max_depth']
 
 
 #defining the model with the best parameters
-fitted_rf = sklearn.ensemble.RandomForestRegressor(criterion='squared_error',
+rf_fitted = sklearn.ensemble.RandomForestRegressor(criterion='squared_error',
                                                     max_depth=rf_trained.best_params_['max_depth'],
                                                     n_estimators=rf_trained.best_params_['n_estimators'],
                                                     min_samples_split=rf_trained.best_params_['min_samples_split'],
@@ -231,22 +231,72 @@ fitted_rf = sklearn.ensemble.RandomForestRegressor(criterion='squared_error',
                                                     n_jobs=-1
                                                     )
 
-cvl = cross_val_score(fitted_rf, X, y, cv=cv_split, scoring='neg_mean_squared_error', n_jobs=-1)
+cvl = cross_val_score(rf_fitted, X, y, cv=cv_split, scoring='neg_mean_squared_error', n_jobs=-1)
 
 print('The mean of the cross validation is: ', np.mean(cvl))
 print('The std of the cross validation is: ', np.std(cvl))
 
 
-#Plottiing the results
+###############Plotting the results#####################
 importlib.reload(rf_plot)  # Reload the module
 from rf_plot import plot_gsearch_results
+from rf_plot import plot_feature_importance
+from rf_plot import plot_results
 
 save_dir='/bettik/moncadaf/data/outputs/machine_learning_calving_project/Random_Forest'
 
+#Plot the gsearch results
 plot_gsearch_results(rf_trained, save_dir= save_dir, save_filename='gsearch_results.png')
 
 #Plot the feature importance
-importlib.reload(rf_plot)  # Reload the module
-from rf_plot import plot_feature_importance
+plot_feature_importance(rf_trained, X, save_dir=save_dir, title = 'feature_importance.png')
 
-plot_feature_importance(rf_trained, X, save_dir=save_dir)
+#Plot the results
+plot_results(y, rf_fitted.predict(X), save_dir=save_dir, title='plot_results.png', axis_lim= 100)
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########Re training the model with the random cros validation##########
+
+from sklearn.model_selection import ShuffleSplit
+
+cv_shuffle = ShuffleSplit(n_splits=8, test_size=0.2, random_state=42)
+rf_trained_casual = rf_train_and_fit(X, y, cv_shuffle, grid, 'neg_mean_squared_error')
+
+
+best_n_estimators = rf_trained_casual.best_params_['n_estimators']
+best_max_depth = rf_trained_casual.best_params_['max_depth']
+best_min_samples_split = rf_trained_casual.best_params_['min_samples_split']
+best_min_samples_leaf = rf_trained_casual.best_params_['min_samples_leaf']
+
+#defining the model with the best parameters
+rf_best = sklearn.ensemble.RandomForestRegressor(criterion= 'squared_error',
+                                                    max_depth=best_max_depth,
+                                                    n_estimators=best_n_estimators,
+                                                    min_samples_split=best_min_samples_split,
+                                                    min_samples_leaf=best_min_samples_leaf,
+                                                    random_state=42,
+                                                    n_jobs=-1
+                                                    )
+cvl_casual = cross_val_score(rf_best, X, y, cv=cv_shuffle, scoring='neg_mean_squared_error', n_jobs=-1)
+print('The mean of the cross validation is: ', np.mean(cvl_casual))
+print('The std of the cross validation is: ', np.std(cvl_casual))
+
+#Plot the gsearch results
+plot_gsearch_results(rf_trained_casual, save_dir= save_dir, save_filename='gsearch_results_casual.png')
+
+#Plot the feature importance
+plot_feature_importance(rf_trained_casual, X, save_dir=save_dir, title = 'feature_importance_casual.png')
+
+#Plot the results
+plot_results(y, rf_best.predict(X), save_dir=save_dir, title='plot_results_casual.png', axis_lim= 100)
