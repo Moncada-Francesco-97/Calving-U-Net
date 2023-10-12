@@ -40,7 +40,6 @@ lats = []
 lons = []
 
 shapefile=fiona.open(shapefile_path)
-print(shapefile.schema['properties'])
 
 for feature in shapefile:
 
@@ -176,7 +175,7 @@ folder_10 = [131,147,157,72,99,136,116,111,119,110,162,159]
 #Merging the folders
 train = [folder_1, folder_2, folder_3, folder_4, folder_5, folder_6, folder_7, folder_8]
 test = [folder_9, folder_10]
-#test = list(chain.from_iterable(test))
+test = list(chain.from_iterable(test))
 
 #Performing block division
 cv_block_1 = dataset.loc[folder_1]
@@ -205,6 +204,7 @@ grid = {
     'max_depth': [2,5],
     'min_samples_split': [2, 5, 10], #no 1
     'min_samples_leaf': [2,5,10],
+    'max_features': [2,3],
     #'criterion': ['squared_error'],
 }
 
@@ -230,6 +230,7 @@ rf_fitted = sklearn.ensemble.RandomForestRegressor(criterion='squared_error',
                                                     random_state=42,
                                                     n_jobs=-1
                                                     )
+y_mod = rf_fitted.fit(X, y).predict(X)
 
 cvl = cross_val_score(rf_fitted, X, y, cv=cv_split, scoring='neg_mean_squared_error', n_jobs=-1)
 
@@ -237,7 +238,7 @@ print('The mean of the cross validation is: ', np.mean(cvl))
 print('The std of the cross validation is: ', np.std(cvl))
 
 
-###############Plotting the results#####################
+###############Plotting the results#############################
 importlib.reload(rf_plot)  # Reload the module
 from rf_plot import plot_gsearch_results
 from rf_plot import plot_feature_importance
@@ -252,14 +253,9 @@ plot_gsearch_results(rf_trained, save_dir= save_dir, save_filename='gsearch_resu
 plot_feature_importance(rf_trained, X, save_dir=save_dir, title = 'feature_importance.png')
 
 #Plot the results
-plot_results(y, rf_fitted.predict(X), save_dir=save_dir, title='plot_results.png', axis_lim= 100)
+plot_results(y, y_mod , save_dir=save_dir, title='plot_results.png', axis_lim= 100)
 
-
-
-
-
-
-
+####################################################################
 
 
 
@@ -269,6 +265,16 @@ plot_results(y, rf_fitted.predict(X), save_dir=save_dir, title='plot_results.png
 ###########Re training the model with the random cros validation##########
 
 from sklearn.model_selection import ShuffleSplit
+
+
+grid = {
+    'n_estimators': [10, 30, 50],
+    'max_depth': [2,5],
+    'min_samples_split': [2, 5, 10], #no 1
+    'min_samples_leaf': [2,5,10],
+    'max_features': [2,3],
+    #'criterion': ['squared_error'],
+}
 
 cv_shuffle = ShuffleSplit(n_splits=8, test_size=0.2, random_state=42)
 rf_trained_casual = rf_train_and_fit(X, y, cv_shuffle, grid, 'neg_mean_squared_error')

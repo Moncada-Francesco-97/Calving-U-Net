@@ -148,6 +148,7 @@ def plot_results(y_data, y_modeled, save_dir=None, title = None, axis_lim = None
     plt.xlabel('y predicted')
     plt.ylabel('y observed')
     sc = plt.scatter(ann_plt, y_plt, c=z, s=5)
+    cbar = plt.colorbar(sc)
 
     textstr = '\n'.join((
         r'$RMSE=%.2f$' % (mean_squared_error(y_data, y_modeled, squared=False), ),
