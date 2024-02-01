@@ -1,3 +1,16 @@
 .DS_Store
 blocks_variables_histograms_all.pdf
 blocks_variables_histograms.pdf
+
+
+
+#Ignore all the npy files which contains the data
+/dataset_tif_interpolated/ice_mask.npy
+/dataset_tif_interpolated/interpolated_pixel_sea_ice_concnetration.npy
+/dataset_tif_interpolated/interpolated_pixels_inpaint_x_multi_year.npy
+/dataset_tif_interpolated/interpolated_pixels_inpaint_y_multi_year.npy
+/dataset_tif_interpolated/interpolated_pixels_thickness.npy
+/dataset_tif_interpolated/interpolated_values_sea_ice_concnetration.npy
+/dataset_tif_interpolated/interpolated_velocity_inpaint_x_multi_year_sea_set_to_0.npy
+/dataset_tif_interpolated/interpolated_velocity_inpaint_y_multi_year_sea_set_to_0.npy
+/dataset_tif_interpolated/thickness_tif_interpolated.npy

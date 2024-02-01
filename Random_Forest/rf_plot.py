@@ -11,6 +11,7 @@ from scipy.stats import gaussian_kde
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 
 
 #This function is used to plot the results of the grid search
@@ -145,15 +146,15 @@ def plot_results(y_data, y_modeled, save_dir=None, title = None, axis_lim = None
     fig, ax = plt.subplots()
     plt.title("Model Evaluation ")
 
-    plt.xlabel('y predicted')
-    plt.ylabel('y observed')
+    plt.xlabel('Calving predicted [Gt/yr]')
+    plt.ylabel('Calving observed [Gt/yr]')
     sc = plt.scatter(ann_plt, y_plt, c=z, s=5)
     cbar = plt.colorbar(sc)
 
     textstr = '\n'.join((
         r'$RMSE=%.2f$' % (mean_squared_error(y_data, y_modeled, squared=False), ),
         r'$R^2=%.2f$' % (r2_score(y_data, y_modeled), ),
-        r'$MSE=%.2f$' % (mean_squared_error(y_data, y_modeled), )))
+        r'$MAE=%.2f$' % (mean_absolute_error(y_data, y_modeled), )))
     props = dict(boxstyle='round', facecolor='white', alpha=0.5)
     ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
             verticalalignment='top', bbox=props)
