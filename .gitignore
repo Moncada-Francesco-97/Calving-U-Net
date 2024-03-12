@@ -17,3 +17,4 @@ blocks_variables_histograms.pdf
 /dataset_tif_interpolated/bm_interpolated_cubic_with_zero.npy
 /dataset_tif_interpolated/thickness_tif_interpolated.npy
 /dataset_tif_interpolated/normalised/
+/dataset_cnn/
