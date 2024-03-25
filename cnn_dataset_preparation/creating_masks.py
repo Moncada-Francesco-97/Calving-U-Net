@@ -14,39 +14,24 @@ import rasterio.mask
 from fiona import Feature, Geometry
 from shapely.geometry import mapping, shape
 import os
+import sys
+import functions
+from functions import read_shapefile
 
 common_years = np.arange(2005,2017)
 
-#Shape file with all the regions
-shape_file = '/UPDATE/squares.shp.gpkg'
+# read shapefile
+shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+df = read_shapefile(shape_file)
 
-ids = []
-boundaries = []
-
-# Open and extract boundaries
-with fiona.open(shape_file, "r") as shapefile:
-    for feature in shapefile:
-        ids.append(int(feature['id'])) #id is registered as a string in the geometry file
-        polygon = shape(feature['geometry'])
-        bounds = polygon.bounds
-        boundaries.append(bounds)
-
-# Create a DataFrame with the information retrieved from the previous block
-df = pd.DataFrame({'boundaries': boundaries}, index=ids)
-
-# Sort the dataset according to the index
-df = df.sort_index()
-pd.set_option('display.max_rows', None)
-
-#save the dataframe
-root = '/UPDATE/JPL_iceshelves_geometryJPL_antarctic_coastline_'
+root = '/bettik/millanr/DATA_SERVER/ANTARCTICA/OCEANICE/COASTLINE/JPL_iceshelves_geometry/FILES_FOR_FRANCESCO/JPL_iceshelves_geometryJPL_antarctic_coastline_'
 end = '_filled.tif'
 
 
-ice_mask = pd.DataFrame(index = ids, columns = common_years)
-land_mask = pd.DataFrame(index = ids, columns = common_years)
-sea_mask = pd.DataFrame(index = ids, columns = common_years)
-grounded_ice_mask = pd.DataFrame(index = ids, columns = common_years)
+ice_mask = pd.DataFrame(index = df.index, columns = common_years)
+land_mask = pd.DataFrame(index = df.index, columns = common_years)
+sea_mask = pd.DataFrame(index = df.index, columns = common_years)
+grounded_ice_mask = pd.DataFrame(index = df.index, columns = common_years)
 
 for id in df.index:
     for year in common_years:
@@ -73,7 +58,7 @@ for id in df.index:
             grounded_ice_mask.loc[id, year] = grounded_ice_mask_tmp
 
 #save the masks as numpy arrays
-cnn_dataset_directory = '/UPDATE/'
+cnn_dataset_directory = '/bettik/moncadaf/data/masks/'
 np.save(cnn_dataset_directory + 'ice_mask.npy', ice_mask)
 np.save(cnn_dataset_directory + 'land_mask.npy', land_mask)
 np.save(cnn_dataset_directory + 'sea_mask.npy', sea_mask)
@@ -83,7 +68,7 @@ np.save(cnn_dataset_directory + 'grounded_ice_mask.npy', grounded_ice_mask)
 from scipy.ndimage import binary_dilation
 
 #now we create the boarders, by expanding the sea ice mask by 1 pixel
-boarders = pd.DataFrame(index = ids, columns = common_years)
+boarders = pd.DataFrame(index = df.index, columns = common_years)
 
 sea_mask_expanded = sea_mask.copy()
 
