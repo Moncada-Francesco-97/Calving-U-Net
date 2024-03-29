@@ -66,7 +66,6 @@ def basal_melting(region_id):
                 bm_tmp = image
 
                 percentile = np.percentile(bm_tmp[~np.isnan(bm_tmp)], percentile_value) #calculating percentile
-                print(percentile)
 
                 #filling the boarders with the percentile value
                 bm_tmp[land_mask.loc[id, year]] = 0 #filling the land with nan
@@ -75,7 +74,6 @@ def basal_melting(region_id):
                 bm_tmp[boarders_mask.loc[id, year]] = percentile
 
                 bm.loc[id, year] = bm_tmp
-
 
     interpolated_values = pd.DataFrame(index = df.index, columns = common_years)
 
@@ -105,5 +103,6 @@ def basal_melting(region_id):
 
 
     np.save(saving_directory + 'bm_region_' + str(region_id) + '.npy', bm_interpolated)
+    print(f'Saved bm region {region_id}')
 
 

@@ -35,9 +35,8 @@ def read_shapefile(shape_file, region_id):
 
 
 
-
-#Load Masks
 def load_masks(cnn_dataset_directory, df, common_years):
+
     """
     Load masks of ice, land, sea, grounded ice, and borders from the specified directory.
     
@@ -50,19 +49,65 @@ def load_masks(cnn_dataset_directory, df, common_years):
     - pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame: DataFrames for ice mask, land mask,
       sea mask, grounded ice mask, and borders mask.
     """
+
     ice_mask = np.load(cnn_dataset_directory + 'ice_mask.npy', allow_pickle=True)
     land_mask = np.load(cnn_dataset_directory + 'land_mask.npy', allow_pickle=True)
     sea_mask = np.load(cnn_dataset_directory + 'sea_mask.npy', allow_pickle=True)
     grounded_ice_mask = np.load(cnn_dataset_directory + 'grounded_ice_mask.npy', allow_pickle=True)
     boarders_mask = np.load(cnn_dataset_directory + 'boarders.npy', allow_pickle=True)
 
-    ice_mask = pd.DataFrame(ice_mask, index=df.index, columns=common_years)
-    land_mask = pd.DataFrame(land_mask, index=df.index, columns=common_years)
-    sea_mask = pd.DataFrame(sea_mask, index=df.index, columns=common_years)
-    grounded_ice_mask = pd.DataFrame(grounded_ice_mask, index=df.index, columns=common_years)
-    boarders_mask = pd.DataFrame(boarders_mask, index=df.index, columns=common_years)
+
+    regions = np.arange(1, 29)
+
+
+    ice_mask = pd.DataFrame(ice_mask, index=regions, columns=common_years)
+    land_mask = pd.DataFrame(land_mask, index=regions, columns=common_years)
+    sea_mask = pd.DataFrame(sea_mask, index=regions, columns=common_years)
+    grounded_ice_mask = pd.DataFrame(grounded_ice_mask, index=regions, columns=common_years)
+    boarders_mask = pd.DataFrame(boarders_mask, index=regions, columns=common_years)
+
+    region_id = df.index
+
+    ice_mask = ice_mask.loc[region_id]
+    land_mask = land_mask.loc[region_id]
+    sea_mask = sea_mask.loc[region_id]
+    grounded_ice_mask = grounded_ice_mask.loc[region_id]
+    boarders_mask = boarders_mask.loc[region_id]
     
     return ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask
+
+
+
+
+# #Load Masks OLD WORKING FOR 28 REGIONS
+# def load_masks(cnn_dataset_directory, df, common_years):
+#     """
+#     Load masks of ice, land, sea, grounded ice, and borders from the specified directory.
+    
+#     Args:
+#     - cnn_dataset_directory (str): Path to the directory containing the masks.
+#     - df (pd.DataFrame): DataFrame with index representing region IDs and columns representing years.
+#     - common_years (list): List of common years across the dataset.
+    
+#     Returns:
+#     - pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame: DataFrames for ice mask, land mask,
+#       sea mask, grounded ice mask, and borders mask.
+#     """
+#     ice_mask = np.load(cnn_dataset_directory + 'ice_mask.npy', allow_pickle=True)
+#     land_mask = np.load(cnn_dataset_directory + 'land_mask.npy', allow_pickle=True)
+#     sea_mask = np.load(cnn_dataset_directory + 'sea_mask.npy', allow_pickle=True)
+#     grounded_ice_mask = np.load(cnn_dataset_directory + 'grounded_ice_mask.npy', allow_pickle=True)
+#     boarders_mask = np.load(cnn_dataset_directory + 'boarders.npy', allow_pickle=True)
+
+
+
+#     ice_mask = pd.DataFrame(ice_mask, index=df.index, columns=common_years)
+#     land_mask = pd.DataFrame(land_mask, index=df.index, columns=common_years)
+#     sea_mask = pd.DataFrame(sea_mask, index=df.index, columns=common_years)
+#     grounded_ice_mask = pd.DataFrame(grounded_ice_mask, index=df.index, columns=common_years)
+#     boarders_mask = pd.DataFrame(boarders_mask, index=df.index, columns=common_years)
+    
+#     return ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask
 
 
 

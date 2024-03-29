@@ -27,8 +27,10 @@ common_years = np.arange(2005,2017)
 
 def thickness(region_id):
     # read shapefile
+    #print(f'Processing region {region_id}, we are into thickness.py')
     shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
+
 
     #Load the masks
     importlib.reload(functions)  # Reload the module
@@ -36,6 +38,8 @@ def thickness(region_id):
 
     cnn_dataset_directory = '/bettik/moncadaf/data/masks/'
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(cnn_dataset_directory, df, common_years)
+
+    #print('Masks loaded')
 
 
     #need to create the list of tif files
@@ -68,6 +72,8 @@ def thickness(region_id):
 
                 thickness_paolo.loc[id, year] = thickness_paolo_tmp
 
+    
+    #print('Paolo thickness loaded')
 
     bed_machine_file = '/bettik/moncadaf/data/shapefiles_antarctica/Bed_Machine_thickness.tif' #Change in cluseter
 
@@ -93,6 +99,7 @@ def thickness(region_id):
 
     #Interpolation 
 
+    #print('Right before interpolation')
 
     interpolated_thickness_cnn_values_2 = pd.DataFrame(index=df.index, columns=common_years)
 

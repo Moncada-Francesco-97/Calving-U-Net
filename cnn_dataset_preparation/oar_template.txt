@@ -1,8 +1,8 @@
 #!/bin/bash
-OAR -n Job_Region{region_number}
+OAR -n Job_Region{0}
 OAR -l /nodes=1/core=16,walltime=5:00:00
-OAR -O Job_Region{region_number}.out
-OAR -E Job_Region{region_number}.err
+OAR -O Job_Region{0}.out
+OAR -E Job_Region{0}.err
 OAR -t idempotent
 OAR --project ice_speed
 
@@ -10,6 +10,7 @@ source /home/moncadaf/.bashrc
 eval "$(/home/moncadaf/miniconda3/bin/conda shell.bash hook)" # properly initialise non-interactive shell
 conda activate myenv
 cd bettik/moncadaf/machine_learning_calving_project/cnn_dataset_preparation/ #change to your own directory
-python bat_Region1.py
+python bat_region.py
 chmod g+w * > /dev/null 2>&1
 
+print('DioCane')

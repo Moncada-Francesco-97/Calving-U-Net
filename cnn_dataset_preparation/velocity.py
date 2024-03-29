@@ -17,7 +17,7 @@ import functions
 import importlib
 import sys
 
-def basal_melting(region_id):
+def velocity(region_id):
 
     #Functions ########################################
     def interpolation_excluding_extreames(A):
@@ -45,7 +45,6 @@ def basal_melting(region_id):
                     x[-3] = A[-3]
                     if np.isnan(A[-4]) == True:
                         x[-4] = A[-4]
-
         return x
 
 
@@ -108,6 +107,7 @@ def basal_melting(region_id):
                     velocity_multy_years_y.loc[id, 'image'][velocity_multy_years_y.loc[id, 'image']==0] = np.nan
 
     ####################################################################
+    #print('Multi year velocity loaded')
 
 
     #EXTRACTING SINGLE YEAR VELOCITY ########################################
@@ -178,7 +178,20 @@ def basal_melting(region_id):
             velocity_y_tif_smoothed.loc[id, year][abs(velocity_y_tif_smoothed.loc[id, year] - vy_tmp_smoothed) > threshold] = np.nan
 
     ####################################################################
+    #print('Single year velocity loaded, smoothed and thresholded')
 
+
+    #Special Treatment for Pine Island ######################################## 
+    #Here I interpolate the missing values in the region of Pine Island
+    if region_id == 24:
+
+        year = 2011
+        mask_nan = np.isnan(velocity_x_tif_smoothed.loc[24, year][120:200, 300:450])
+        velocity_x_tif_smoothed.loc[24, year][120:200, 300:450] = inpaint.inpaint_biharmonic(velocity_x_tif_smoothed.loc[24, year][120:200, 300:450], mask_nan)
+        mask_nan_2 = np.isnan(velocity_y_tif_smoothed.loc[24, year][120:200, 300:450])
+        velocity_y_tif_smoothed.loc[24, year][120:200, 300:450] = inpaint.inpaint_biharmonic(velocity_y_tif_smoothed.loc[24, year][120:200, 300:450], mask_nan_2)
+
+    ####################################################################
 
 
     #Create the masks for the ice shelves ########################
@@ -226,7 +239,6 @@ def basal_melting(region_id):
             j = 0
 
             for i in range(1,prova_id+1):
-                #print(i)
 
                 ice_shelf_mask = prova == ice_shelves_numbers[j] #Get the mask of ice shelf number n
                 ice_shelf_mask = ice_shelf_mask.astype(bool) #convert ice_shelf_mask to boolean
@@ -242,7 +254,6 @@ def basal_melting(region_id):
 
                 # Calculate the ratio of non-NaN pixels to True pixels
                 ratio_non_nan_to_true = num_non_nan_pixels / num_true_pixels
-                #print('Ratio of non-NaN pixels to True pixels:', ratio_non_nan_to_true)
 
                 if ratio_non_nan_to_true < 0.7:
 
@@ -256,10 +267,16 @@ def basal_melting(region_id):
     for id in df.index:
         for year in common_years:
             masks_filtered.loc[id,year] = masks_filtered.loc[id,year].astype(bool)
+    
+    # #save the masks 
+    # saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
+    # np.save(saving_directory + f'masks_filtered_region_{region_id}.npy', masks_filtered)
+    # np.save(saving_directory + f'velocity_x_tif_smoothed_region_{region_id}.npy', velocity_x_tif_smoothed)
+    # np.save(saving_directory + f'velocity_y_tif_smoothed_region_{region_id}.npy', velocity_y_tif_smoothed)
 
     ####################################################################
 
-
+    #print('Ice shelf masks created, right before interpolation')
     #interpolate into the ice shelf mask ########################################
     from skimage.restoration import inpaint
 
@@ -267,7 +284,7 @@ def basal_melting(region_id):
 
     for id in df.index:
         for year in common_years:
-            print(year)
+            #print(year)
             
             data_tmp = np.where(masks_filtered.loc[id,year], velocity_x_tif_smoothed.loc[id,year], np.nan)
             data_tmp = np.where(~masks_filtered.loc[id,year], velocity_x_tif_smoothed.loc[id,year], data_tmp)
@@ -296,7 +313,7 @@ def basal_melting(region_id):
 
             coverage_ratio_x.loc[id,year] = num_non_nan_pixels/num_true_pixels
 
-            print('The ratio of non-NaN pixels to True pixels for the year', year, 'is', coverage_ratio_x.loc[id,year])
+            #print('The ratio of non-NaN pixels to True pixels in x for the year', year, 'is', coverage_ratio_x.loc[id,year])
 
             interpolated_ice_x.loc[id,year] = data_tmp_all_ice
 
@@ -319,7 +336,7 @@ def basal_melting(region_id):
             interpolated_floating_ice_y.loc[id,year][~masks_filtered.loc[id,year]] = np.nan
 
 
-    #Now i interpolate the grounded ice
+    #Now i interpolate the grounded ice for y
 
     interpolated_ice_y = pd.DataFrame(index = df.index, columns = common_years)
     coverage_ratio_y = pd.DataFrame(index = df.index, columns = common_years)
@@ -340,7 +357,7 @@ def basal_melting(region_id):
 
             coverage_ratio_y.loc[id,year] = num_non_nan_pixels/num_true_pixels
 
-            print('The ratio of non-NaN pixels to True pixels for the year', year, 'is', coverage_ratio_y.loc[id,year])
+            #print('The ratio of non-NaN pixels to True pixels in y for the year', year, 'is', coverage_ratio_y.loc[id,year])
 
             interpolated_ice_y.loc[id,year] = data_tmp_all_ice
 
@@ -352,11 +369,11 @@ def basal_melting(region_id):
 
 
 
-
+    #print('First interpolation done, now i start with Specific treatments fo Twhaites')
     #Specific treatment for Pine Island in year 2006 
-
-    mask_nan_pi = np.isnan(interpolated_ice_y.loc[1,2006][150:225, 790:812])
-    interpolated_ice_y.loc[1,2006][150:225, 790:812] = inpaint.inpaint_biharmonic(interpolated_ice_y.loc[1,2006][150:225, 790:812], mask_nan_pi)
+    if region_id == 24:
+        mask_nan_pi = np.isnan(interpolated_ice_y.loc[1,2006][100:175, 420:440])
+        interpolated_ice_y.loc[1,2006][100:175, 420:440] = inpaint.inpaint_biharmonic(interpolated_ice_y.loc[1,2006][100:175, 420:440], mask_nan_pi)
 
     ####################################################################
 
@@ -454,7 +471,7 @@ def basal_melting(region_id):
             #interpolate the nan values as the average of the two closest values
             x = interpolation_excluding_extreames(x)
 
-            x = fill_fist_values(x)
+            x = fill_first_values(x)
 
             raveled_vector_x[i, j, :] = x
 
@@ -533,15 +550,9 @@ def basal_melting(region_id):
 
             if coverage_ratio_y.loc[id, year] < threshold_interpolation:
                 velocity_multi_and_single_y.loc[id, year] = interpolated_ratios_y.loc[id, year] * velocity_multy_years_y.loc[id, 'image']
-
-    velocity_multi_and_single = pd.DataFrame(index = df.index, columns = common_years)
-
-    for id in df.index:
-        for year in common_years:
-
-            velocity_multi_and_single.loc[id, year] = np.sqrt(velocity_multi_and_single_x.loc[id, year]**2 + velocity_multi_and_single_y.loc[id, year]**2)
     ####################################################################
             
+
 
     #Multy year velocity x and y have the same nans, so we can use the same mask for both.
     #This mask presents the regions where we have nan in multi years AND floating ice
@@ -554,8 +565,6 @@ def basal_melting(region_id):
 
         for year in common_years:
 
-                #check when velocity_multy_years_x.loc[id, 'image'][ice_mask.loc[id, year]] is 0
-                #velocity_01_x.loc[id, year][ice_mask.loc[id, year]] = 0
                 green_and_multi.loc[id,year] = np.logical_and(mask_nan_in_multi_year, ice_mask.loc[id, year])
     ####################################################################
                 
@@ -563,77 +572,88 @@ def basal_melting(region_id):
 
     #Specific treatment for Thwaites ########################################
     #Here i fill the boarders of the Thwaites ice shelf with the average velocity of the ice shelf region
+    if region_id == 24:
 
-    #This first step is useful just for having a correct mask size
-    board = boarders_mask.loc[1, 2008]
-    ice = ice_mask.loc[1, 2008]
-    board_ice = np.logical_and(board, ice)
-                
-    # Define the slices for the regions of interest
-    region1_slice = (slice(280, 401), slice(710, 791))
-    region2_slice = (slice(580, 741), slice(660,826))
+        print('Thwaites specific treatment')
 
-    result_mask = np.full_like(board_ice, fill_value=False)
+        #This first step is useful just for having a correct mask size
+        board = boarders_mask.loc[24, 2008]
+        ice = ice_mask.loc[24, 2008]
 
-    # Extract the regions using the slices
-    result_mask[region1_slice] = board_ice[region1_slice]
-    result_mask[region2_slice] = board_ice[region2_slice]
+        board_ice = np.logical_and(board, ice)
+                    
+        #Cooking Thwaites and PI: I create boarder masks and I calculate the average velocity in the boarders
+        from scipy import ndimage
 
-    pine_island_boarders_average_x = pd.DataFrame(index = df.index, columns = common_years)
-    thwaites_boarders_average_x = pd.DataFrame(index = df.index, columns = common_years)
+        # Define the slices for the regions of interest
+        region1_slice = (slice(235, 351), slice(336, 421))
+        region2_slice = (slice(500, 686), slice(280,451))
 
-    pine_island_boarders_average_y = pd.DataFrame(index = df.index, columns = common_years)
-    thwaites_boarders_average_y = pd.DataFrame(index = df.index, columns = common_years)
+        result_mask = np.full_like(board_ice, fill_value=False)
 
-    interpo_th_x = []
-    interpo_th_y = []
+        # Extract the regions using the slices
+        result_mask[region1_slice] = board_ice[region1_slice]
+        result_mask[region2_slice] = board_ice[region2_slice]
 
-    pine_island_boarder = pd.DataFrame(index = df.index, columns = common_years)
-    thwaites_boarders = pd.DataFrame(index = df.index, columns = common_years)
+        pine_island_boarders_average_x = pd.DataFrame(index = df.index, columns = common_years)
+        thwaites_boarders_average_x = pd.DataFrame(index = df.index, columns = common_years)
 
-    for id in df.index:
-        for year in common_years:
+        pine_island_boarders_average_y = pd.DataFrame(index = df.index, columns = common_years)
+        thwaites_boarders_average_y = pd.DataFrame(index = df.index, columns = common_years)
 
-            #Here we look at the average velocity in the boarders of the two regions, usign theoriginal data
-            pine_island_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region1_slice])
-            thwaites_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region2_slice])
+        interpo_th_x = []
+        interpo_th_y = []
 
-            pine_island_boarders_average_y.loc[id,year] = np.nanmean(velocity_y_tif_smoothed.loc[id, year][region1_slice])
-            thwaites_boarders_average_y.loc[id,year] = np.nanmean(velocity_y_tif_smoothed.loc[id, year][region2_slice])
+        pine_island_boarder = pd.DataFrame(index = df.index, columns = common_years)
+        thwaites_boarders = pd.DataFrame(index = df.index, columns = common_years)
 
-            interpo_th_x.append(np.nanmean(velocity_x_tif_smoothed.loc[id, year][region2_slice]))
-            interpo_th_y.append(np.nanmean(velocity_y_tif_smoothed.loc[id, year][region2_slice]))
+        for id in df.index:
+            for year in common_years:
 
-            #Here we load the boarders
-            board = boarders_mask.loc[id, year]
-            ice = ice_mask.loc[id, year]
+                #Here we look at the average velocity in the boarders of the two regions, usign theoriginal data
+                pine_island_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region1_slice])
+                thwaites_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region2_slice])
 
-            #where we have both ice and boarders
-            ice_board = np.logical_and(board, ice)
+                pine_island_boarders_average_y.loc[id,year] = np.nanmean(velocity_y_tif_smoothed.loc[id, year][region1_slice])
+                thwaites_boarders_average_y.loc[id,year] = np.nanmean(velocity_y_tif_smoothed.loc[id, year][region2_slice])
 
-            #creating background for PI and Th
-            back_ground_pi = np.full_like(ice, fill_value=False)
-            back_ground_th = np.full_like(ice, fill_value=False)
+                interpo_th_x.append(np.nanmean(velocity_x_tif_smoothed.loc[id, year][region2_slice]))
+                interpo_th_y.append(np.nanmean(velocity_y_tif_smoothed.loc[id, year][region2_slice]))
 
-            #The slices for the regions of interest
-            back_ground_pi[region1_slice] = ice_board[region1_slice]
-            back_ground_th[region2_slice] = ice_board[region2_slice]
+                #Here we load the boarders
+                board = boarders_mask.loc[id, year]
+                ice = ice_mask.loc[id, year]
 
-            #Expand the boarders of 10 pixels
-            #back_ground_pi = ndimage.binary_dilation(back_ground_pi, iterations=iterations)
-            #back_ground_th = ndimage.binary_dilation(back_ground_th, iterations=iterations)
+                #where we have both ice and boarders
+                ice_board = np.logical_and(board, ice)
 
-            #saving the boarders
-            pine_island_boarder.loc[id, year] = back_ground_pi
-            thwaites_boarders.loc[id, year] = back_ground_th
+                #creating background for PI and Th
+                back_ground_pi = np.full_like(ice, fill_value=False)
+                back_ground_th = np.full_like(ice, fill_value=False)
+
+                #The slices for the regions of interest
+                back_ground_pi[region1_slice] = ice_board[region1_slice]
+                back_ground_th[region2_slice] = ice_board[region2_slice]
+
+                #Expand the boarders of 10 pixels
+                #back_ground_pi = ndimage.binary_dilation(back_ground_pi, iterations=iterations)
+                #back_ground_th = ndimage.binary_dilation(back_ground_th, iterations=iterations)
+
+                #saving the boarders
+                pine_island_boarder.loc[id, year] = back_ground_pi
+                thwaites_boarders.loc[id, year] = back_ground_th
 
 
-    #Make the interpolation of the missing boarders values
-    interpo_th_x = np.array(interpo_th_x)
-    interpo_th_x = interpolation_excluding_extreames(interpo_th_x)
+        #Here data coverage is minimal, so I will interpolate the values
+        interpo_th_x[7] = np.nan 
+        interpo_th_y[7] = np.nan
 
-    interpo_th_y = np.array(interpo_th_y)
-    interpo_th_y = interpolation_excluding_extreames(interpo_th_y)
+        #Make the interpolation of the missing boarders values
+        interpo_th_x = np.array(interpo_th_x)
+        interpo_th_x = interpolation_excluding_extreames(interpo_th_x)
+
+        interpo_th_y = np.array(interpo_th_y)
+        interpo_th_y = interpolation_excluding_extreames(interpo_th_y)
     ####################################################################
 
 
@@ -645,12 +665,14 @@ def basal_melting(region_id):
     for id in df.index:
         for year in common_years:
 
-            print(year)
-
             prova = velocity_multi_and_single_x.loc[id, year]
             prova[green_and_multi.loc[id, year]] = np.nan
-            prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_x.loc[id, year]
+
+            #Creating the boarders for Thwaites
+            if region_id == 24:
+                prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_x.loc[id, year]
             #prova[pine_island_boarder.loc[id,year]] = pine_island_boarders_average_x.loc[id, year]
+                
             mask_nan = np.isnan(prova)
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
             prova[sea_mask.loc[id, year]] = np.nan           
@@ -664,66 +686,79 @@ def basal_melting(region_id):
     for id in df.index:
         for year in common_years:
 
-            print(year)
-
             prova = velocity_multi_and_single_y.loc[id, year]
             prova[green_and_multi.loc[id, year]] = np.nan
-            prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_y.loc[id, year]
-            #prova[pine_island_boarder.loc[id,year]] = pine_island_boarders_average_x.loc[id, year]
+
+            if region_id == 24:
+                prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_y.loc[id, year]
+                #prova[pine_island_boarder.loc[id,year]] = pine_island_boarders_average_x.loc[id, year]
+
             mask_nan = np.isnan(prova)
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
             prova[sea_mask.loc[id, year]] = np.nan           
 
             v_y_final.loc[id, year] = prova 
-    ####################################################################
+
+####################################################################
             
 
-    #Modyfiyng Thwaites region for the year 2011, 2012, 2013,
-    #to maximise the use of the dataset.
-            
-    region_th = (slice(380, 741), slice(600, 1001)) #Thwaites
-    mask_th = pd.DataFrame(index = df.index, columns = common_years)
+####Creating masks for Twaithes shape############################################       
+    if region_id == 24:
 
-    for id in df.index:
-        for year in common_years:
-            result_mask = np.full_like(ice_mask.loc[id,year], fill_value=False)
-            result_mask[region_th] = ice_mask.loc[id,year][region_th]
-            mask_th.loc[id, year] = result_mask
+        region_th = (slice(350, 690), slice(300, 600)) #Thwaites
+
+        mask_th = pd.DataFrame(index = df.index, columns = common_years)
+
+        for id in df.index:
+            for year in common_years:
+                result_mask = np.full_like(ice_mask.loc[id,year], fill_value=False)
+                result_mask[region_th] = ice_mask.loc[id,year][region_th]
+                mask_th.loc[id, year] = result_mask
+#########################################################################
 
 
     v_x_final_2 = pd.DataFrame(index = df.index, columns = common_years)
     v_y_final_2 = pd.DataFrame(index = df.index, columns = common_years)
 
+
     i = 0
-    for year in [2011,2012,2013]:
-        
-        prova = v_x_final.loc[1, year]
-        prova[green_and_multi.loc[id, year]] = np.nan
-        prova[mask_th.loc[id, year]] = np.nan
-        prova[mask_th.loc[id, year]] = velocity_x_tif_smoothed.loc[id, year][mask_th.loc[id, year]]
-        prova[thwaites_boarders.loc[id,year]] = interpo_th_x[i]
+    id = region_id
+    if region_id == 24:
+        for year in [2011,2012,2013]:
+            
+            prova = v_x_final.loc[id, year]
+            prova[green_and_multi.loc[id, year]] = np.nan
 
-        mask_nan = np.isnan(prova)
-        prova = inpaint.inpaint_biharmonic(prova, mask_nan)
-        prova[sea_mask.loc[id, year]] = np.nan
+            #Here I empty the Thwaites region and I fill its boarders
 
-        v_x_final_2.loc[1, year] = prova
+            prova[mask_th.loc[id, year]] = np.nan
+            prova[mask_th.loc[id, year]] = velocity_x_tif_smoothed.loc[id, year][mask_th.loc[id, year]]
+            prova[thwaites_boarders.loc[id,year]] = interpo_th_x[i]
 
-        #Same for y
+            mask_nan = np.isnan(prova)
+            prova = inpaint.inpaint_biharmonic(prova, mask_nan)
+            prova[sea_mask.loc[id, year]] = np.nan
 
-        prova = v_y_final.loc[1, year]
-        prova[green_and_multi.loc[id, year]] = np.nan
-        prova[mask_th.loc[id, year]] = np.nan
-        prova[mask_th.loc[id, year]] = velocity_y_tif_smoothed.loc[id, year][mask_th.loc[id, year]]
-        prova[thwaites_boarders.loc[id,year]] = interpo_th_y[i]
+            v_x_final_2.loc[id, year] = prova
 
-        mask_nan = np.isnan(prova)
-        prova = inpaint.inpaint_biharmonic(prova, mask_nan)
-        prova[sea_mask.loc[id, year]] = np.nan
+            #Same for y
 
-        v_y_final_2.loc[1, year] = prova
+            prova = v_y_final.loc[id, year]
+            prova[green_and_multi.loc[id, year]] = np.nan
 
-        i = i + 1
+            #Here I empty the Thwaites region and I fill its boarders
+            if region_id == 24:
+                prova[mask_th.loc[id, year]] = np.nan
+                prova[mask_th.loc[id, year]] = velocity_y_tif_smoothed.loc[id, year][mask_th.loc[id, year]]
+                prova[thwaites_boarders.loc[id,year]] = interpo_th_y[i]
+
+            mask_nan = np.isnan(prova)
+            prova = inpaint.inpaint_biharmonic(prova, mask_nan)
+            prova[sea_mask.loc[id, year]] = np.nan
+
+            v_y_final_2.loc[id, year] = prova
+
+            i = i + 1
 
 
     #Modifying the final dataset for the years 2011, 2012, 2013
@@ -736,9 +771,16 @@ def basal_melting(region_id):
             v_x_final_3.loc[id, year] = v_x_final.loc[id, year]
             v_y_final_3.loc[id, year] = v_y_final.loc[id, year]
 
-            if year == 2011 or year == 2012 or year == 2013:
-                v_x_final_3.loc[id, year] = v_x_final_2.loc[id, year]
-                v_y_final_3.loc[id, year] = v_y_final_2.loc[id, year]
+            if region_id == 24: #specific condition for Pine Island
+                if year == 2011 or year == 2012 or year == 2013:
+                    v_x_final_3.loc[id, year] = v_x_final_2.loc[id, year]
+                    v_y_final_3.loc[id, year] = v_y_final_2.loc[id, year]
+
+    for id in df.index:
+        for year in common_years:
+    
+                v_x_final_3.loc[id, year][sea_mask.loc[id, year]] = 0
+                v_y_final_3.loc[id, year][sea_mask.loc[id, year]] = 0  
 
     velocity = pd.DataFrame(index = df.index, columns = common_years)
 
@@ -754,4 +796,6 @@ def basal_melting(region_id):
     np.save(saving_directory + 'v_region_' + str(region_id) + '.npy', velocity)
     np.save(saving_directory + 'v_x_region_' + str(region_id) + '.npy', v_x_final_3)
     np.save(saving_directory + 'v_y_region_' + str(region_id) + '.npy', v_y_final_3)
+
+    print('Region', region_id, 'saved for ice velocity')
 
