@@ -48,30 +48,32 @@ def create_oar_file(region_number):
     f = open(f'Job_Region{region_number}.oar', 'w')
     f.write('#!/bin/bash\n')
     f.write(f'#OAR -n Job_Region_{region_number}\n')
-    f.write('#OAR -l /nodes=1/core=16,walltime=5:00:00\n')
+    f.write('#OAR -l /nodes=1/core=16,walltime=4:00:00\n')
     f.write('#OAR -O result_prep.%jobid%.out\n')
     f.write('#OAR -E result_prep.%jobid%.err\n')
     f.write('#OAR -t idempotent\n')
+    f.write('#OAR -q default\n')
     f.write('#OAR --project ice_speed\n')
     f.write('\n')
     f.write('source /home/moncadaf/.bashrc\n')
     f.write('eval "$(/home/moncadaf/miniconda3/bin/conda shell.bash hook)"\n')
     f.write('conda activate myenv\n')
-    f.write('cd bettik/moncadaf/machine_learning_calving_project/cnn_dataset_preparation/\n')
+    f.write('cd /bettik/moncadaf/machine_learning_calving_project/cnn_dataset_preparation/\n')
     f.write(f'python bat_region.py {region_number}\n')
-
     f.close()
+    
     print(f'Job_Region{region_number}.oar created')
-
-    os.system('oarsub -S ./Job_Region{region_number}.oar')
+    
+    os.system('chmod 777 Job_Region'+str(region_number)+'.oar')
+    os.system(f'oarsub -S ./Job_Region{region_number}.oar')
 
 def main():
     # Iterate over regions from 1 to 28
-    for region_number in range(1, 29):
+    for region_number in [24]:
         print(f'Creating files for region {region_number}')
         create_oar_file(region_number)
 
-        subprocess.run(["python", "bat_region.py", str(region_number)])
+        #subprocess.run(f"python bat_region.py {region_number}", shell =True)
 
 
 

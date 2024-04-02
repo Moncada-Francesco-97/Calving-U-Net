@@ -79,6 +79,8 @@ def sea_ice_concentration(region_id):
                     xmin, ymin, xmax, ymax = df.loc[id, 'boundaries']
                     window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform) 
                     image = src.read(1, window=window) #this is bm in the window
+
+                    print('Year: ' + str(year) + ' Month: ' + str(i) + ' Image shape: ' + str(image.shape))
                     image_avg = image_avg + image
                     
                     if i == 11:

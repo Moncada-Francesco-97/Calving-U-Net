@@ -88,6 +88,8 @@ def thickness(region_id):
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
                 image = src.read(1, window=window) #this is bed machine
 
+                print('The shape of the bed_machine for the year {} is {}'.format(year, image.shape))
+
                 # Here I am removing pixels where there is ice (according to Greene mask)
                 image = np.where(ice_mask.loc[id, year] == True, np.nan, image)
 
@@ -99,7 +101,7 @@ def thickness(region_id):
 
     #Interpolation 
 
-    #print('Right before interpolation')
+    print('Right before thicknes interpolation')
 
     interpolated_thickness_cnn_values_2 = pd.DataFrame(index=df.index, columns=common_years)
 
