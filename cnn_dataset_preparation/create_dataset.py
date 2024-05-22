@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-import imageio 
 import fiona
 import rasterio
 import rasterio.transform
@@ -48,7 +47,7 @@ def create_oar_file(region_number):
     f = open(f'Job_Region{region_number}.oar', 'w')
     f.write('#!/bin/bash\n')
     f.write(f'#OAR -n Job_Region_{region_number}\n')
-    f.write('#OAR -l /nodes=1/core=16,walltime=4:00:00\n')
+    f.write('#OAR -l /nodes=1/core=32,walltime=8:00:00\n')
     f.write('#OAR -O result_prep.%jobid%.out\n')
     f.write('#OAR -E result_prep.%jobid%.err\n')
     f.write('#OAR -t idempotent\n')
@@ -69,7 +68,7 @@ def create_oar_file(region_number):
 
 def main():
     # Iterate over regions from 1 to 28
-    for region_number in [24]:
+    for region_number in [33,36]:
         print(f'Creating files for region {region_number}')
         create_oar_file(region_number)
 

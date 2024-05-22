@@ -1,11 +1,10 @@
-# Import necessary Python packages 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colors
 import matplotlib.colors as clr
 import pandas as pd
 import os
-#import tensorrt
+import sys
 import tensorflow as tf
 from tensorflow import keras
 
@@ -14,166 +13,126 @@ from tensorflow.keras import losses
 from tensorflow.keras import models
 from tensorflow.keras import metrics
 from tensorflow.keras import optimizers
-import tensorflow as tf
-#import keras
+
+#From my functions
+from functions_architectures import generate_index
+from functions_architectures import unet_model
+from functions_architectures import spatial_folders
+from functions_architectures import temporal_folders
+from functions_architectures import diceloss
+from functions_architectures import unet_model_attention
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
+
+if len(sys.argv) < 2:
+    print("No arguments provided!")
+    sys.exit(1)
+
+    # sys.argv[0] is the script name, so the first argument is sys.argv[1]
+model_number = int(sys.argv[1])
+print(f"Argument received: {model_number}")
+
 #Load Dataset
-#resized_features.npy'
 
 features_path = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/features.npy' 
 features = np.load(features_path, allow_pickle=True)
 
-targets_path = '//bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/target.npy' 
+targets_path = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/target.npy' 
 targets = np.load(targets_path, allow_pickle=True)
+
+n_features = len(features)
+n_targets = len(targets)
+
+#This function generates the indexes for the cross_validation
+index_tot = generate_index(n_features, n_targets)
+
+
+#IMPORTANT: ONE OF THE TWO FOLLOWING LINE NEED TO BE COMMENTED!!!!!!!!!!!!!!!!
+cross_strategy = 'Attention_NUMBER_' + str(model_number)
+n_epochs = 25
+
+#This function generates the temporal folders
+cv_features, cv_targets, X_test, y_test = temporal_folders(features, targets, index_tot)
+
+#This function generates the spatial folders
+#cv_features, cv_targets, X_test, y_test = spatial_folders(features, targets, index_tot)
 
 print('Data loaded')
 
-#Easy split of the data
-# from sklearn.model_selection import train_test_split #3 mins
 
-# print('I have imported sklearn')
-# X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=42)
-# X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-
-#Block split of the data
-
-#I want to create an index which has the same lenght of the target array, but is 1 for the first 11 elements, 2 for the following 11 elements, and so on
-index = np.zeros(len(features))
-for i in range(len(features)):
-    index[i] = int(i/11)+1
-
-#I want to create an index which has the same lenght of the target array, which goes from 2005 to 2015, adn then repeat till the end
-years = np.zeros(len(targets))
-for i in range(len(targets)):
-    years[i] = 2005 + i%11
-
-index_tot = np.concatenate((index.reshape(-1,1).astype(int), years.reshape(-1,1).astype(int)), axis=1)
-
-X_train = []
-y_train = []
-X_test = []
-y_test = []
-
-for sample in range(len(features)):    
-    region, year = index_tot[sample]
-
-    if region in [1,8,9,12,17,21]:
-        y_test.append(targets[sample])
-        X_test.append(features[sample])
-    else:
-        y_train.append(targets[sample])
-        X_train.append(features[sample])
-        
-X_train = np.array(X_train)
-y_train = np.array(y_train)
-X_test = np.array(X_test)
-y_test = np.array(y_test)
-
-print('Data split, the shape of the training data is:', X_train.shape, 'and the shape of the test data is:', X_test.shape)
-print('The shape of the training target is:', y_train.shape, 'and the shape of the test target is:', y_test.shape)
-
-
-
-saving_dir = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/'
-
-# np.save(saving_dir + 'X_train.npy', X_train)
-# np.save(saving_dir + 'X_test.npy', X_test)
-# np.save(saving_dir + 'y_train.npy', y_train)
-# np.save(saving_dir + 'y_test.npy', y_test)
-
-
-# print('The X_train shape is:', X_train.shape)
-# print('The X_val shape is:', X_val.shape)
-# print('The X_test shape is:', X_test.shape)
-
-
-
-window_size = 1024 #256
+#Specifications for model input parameters
+window_size = 1024
 n_regions = 28
 n_feature_variables = 6
 n_target_variables = 1
 n_years = 11
 
-# Metrics
-METRICS = [
-      metrics.TruePositives(name='tp'),
-      metrics.FalsePositives(name='fp'),
-      metrics.TrueNegatives(name='tn'),
-      metrics.FalseNegatives(name='fn'),
-      metrics.BinaryAccuracy(name='accuracy'),
-      metrics.Precision(name='precision'),
-      metrics.Recall(name='recall'),
-      metrics.AUC(name='auc'),
-      metrics.AUC(name='prc', curve='PR')]
 
-Input_shapes = (window_size,window_size,n_feature_variables)
-optimizer = 'ADAM'
-loss = 'binary_crossentropy'
+#Here i perform the cross-validation
+# for i in range(len(cv_features)):
+
+#     print('Training model ', i+1)
+
+#     X_val_test  = np.array(cv_features[i])
+#     y_val_test = np.array(cv_targets[i])
+
+#     X_val_train = np.array(np.concatenate([cv_features[j] for j in range(len(cv_features)) if j != i]))
+#     y_val_train = np.array(np.concatenate([cv_targets[j] for j in range(len(cv_targets)) if j != i]))
+
+#     model = unet_model(window_size,n_feature_variables)
+#     model.compile(optimizer='adam',
+#                   loss=diceloss,
+#                   metrics=['accuracy', metrics.Precision()])
+
+#     print('Model ', i+1,  ' compiled, ready to train, ', cross_strategy)
+
+#     weight = model.get_weights()
+
+#     history = model.fit(X_val_train, y_val_train, batch_size = 20, epochs = n_epochs, validation_data = (X_val_test, y_val_test), verbose = 1)
 
 
-#Easy implementation of U-Net model
+#     model_dir = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/model_architecture/'
 
-def unet_model(input_shape=(window_size, window_size, n_feature_variables)):
-    inputs = keras.Input(shape=input_shape)
+#     #Save the model
+#     model.save(model_dir + 'model_' + str(i+1) + cross_strategy +'.h5')
 
-    # Encoder First argument is the number of output channels(filters), the second is the kernel size.
-    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(inputs)
-    conv1 = layers.Conv2D(64, 3, activation='relu', padding='same')(conv1)
-    pool1 = layers.MaxPooling2D(pool_size=(2, 2))(conv1)
+#     #Save the history
+#     history_df = pd.DataFrame(history.history)
+#     history_df.to_csv(model_dir + 'history_' + str(i+1) + cross_strategy + '.csv')
 
-    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(pool1)
-    conv2 = layers.Conv2D(128, 3, activation='relu', padding='same')(conv2)
-    pool2 = layers.MaxPooling2D(pool_size=(2, 2))(conv2)
+#     #save th weights
+#     model.save_weights(model_dir + 'weights_' + str(i+1) + cross_strategy +'.weights.h5')
 
-    # Bottleneck 
-    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(pool2)
-    conv3 = layers.Conv2D(256, 3, activation='relu', padding='same')(conv3)
+#     print('model_' + str(i+1) + cross_strategy +'.h5 saved')
 
-    # Decoder
-    up4 = layers.UpSampling2D(size=(2, 2))(conv3)
-    concat4 = layers.Concatenate(axis=-1)([conv2, up4])
-    conv4 = layers.Conv2D(128, 3, activation='relu', padding='same')(concat4)
-    conv4 = layers.Conv2D(128, 3, activation='relu', padding='same')(conv4)
+model = unet_model_attention(window_size,n_feature_variables)
+model.compile(optimizer='adam', loss=diceloss, metrics=['accuracy', metrics.Precision()])
 
-    up5 = layers.UpSampling2D(size=(2, 2))(conv4)
-    concat5 = layers.Concatenate(axis=-1)([conv1, up5])
-    conv5 = layers.Conv2D(64, 3, activation='relu', padding='same')(concat5)
-    conv5 = layers.Conv2D(64, 3, activation='relu', padding='same')(conv5)
+i = model_number -1
 
-    # Output layer
-    outputs = layers.Conv2D(1, 1, activation='sigmoid')(conv5)
+X_val_test  = np.array(cv_features[i])
+y_val_test = np.array(cv_targets[i])
 
-    model = keras.Model(inputs=inputs, outputs=outputs)
-    return model
+print('the lenght of feature is ', len(cv_features))
 
-# Create the U-Net model
-print('Before declaring the model')
-model = unet_model()
+X_val_train = np.array(np.concatenate([cv_features[j] for j in range(len(cv_features)) if j != i]))
+y_val_train = np.array(np.concatenate([cv_targets[j] for j in range(len(cv_targets)) if j != i]))
 
-model.summary()
+history = model.fit(X_val_train, y_val_train, batch_size = 20, epochs = n_epochs, verbose = 1, validation_data = (X_val_test, y_val_test))
 
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model_dir = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/model_architecture/'
 
-print('Model compiled, ready to train')
+#Save the model
+model.save(model_dir + 'model_' + cross_strategy +'.h5')
 
-#history = model.fit(X_train, y_train, batch_size = 10, epochs = 10, validation_data = (X_val, y_val), verbose = 1)
-history = model.fit(X_train, y_train, batch_size = 10, epochs = 10, validation_split = 0.2, verbose = 1)
+#Save the history
+history_df = pd.DataFrame(history.history)
+history_df.to_csv(model_dir + 'history_' + cross_strategy + '.csv')
 
-# Save the model
-model.save('/bettik/moncadaf/data/outputs/machine_learning_calving_project/model_architecture/model_v_001.h5')
-model.save('/bettik/moncadaf/data/outputs/machine_learning_calving_project/model_architecture/model_v_001.keras')
-print('Model saved')
+#save th weights
+model.save_weights(model_dir + 'weights_' + cross_strategy +'.weights.h5')
 
-print('Ready to predict')
-prediction = model.predict(X_test, verbose = 1)
+print('model_' + cross_strategy +'.h5 saved')
 
-# Evaluate the model
-loss, accuracy = model.evaluate(X_test, y_test, verbose=1)
 
-print('Test loss:', loss)
-print('Test accuracy:', accuracy)
-
-#save the OUTPUTS
-np.save(saving_dir + 'predictions_v_001.npy', prediction)

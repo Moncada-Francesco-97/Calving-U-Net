@@ -32,6 +32,9 @@ v_dfs = []
 root = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
 
 for region in range(1, 29):  # Modify range(1, 29) if you have regions 1 to 28
+
+    print(f'Processing region {region}...')
+
     # Load bm data
     bm_file_path = root + f'bm_region_{region}.npy'
     bm_data = np.load(bm_file_path, allow_pickle=True)
@@ -138,7 +141,7 @@ for id in v.index:
         sic_normalized.loc[id,year] = sic.loc[id,year] / 100
 
 #Save the dataset as numpy files here /Users/francesco/Desktop/machine_learning_calving_project/dataset_cnn
-saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/' #CHANGE IN CLUSETER
+saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/normalised_dataset/'
 
 np.save(saving_directory + 'bm_normalized.npy', bm_normalized)
 np.save(saving_directory + 'v_x_normalized.npy', v_x_normalized)
@@ -175,8 +178,6 @@ stacked_arrays = np.reshape(stacked_arrays, (n_regions * n_years, n_feature_vari
 target_mask = np.reshape(target, (n_regions * n_years, n_target_variables))
 
 #Give shape (1536,1024,1024,6) to the features and (1536,256,256,1) to the target
-
-
 features = np.zeros((n_regions*n_years,window_size,window_size,n_feature_variables))
 target = np.zeros((n_regions*n_years,window_size,window_size,n_target_variables))
 

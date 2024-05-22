@@ -4,7 +4,6 @@ import pandas as pd
 import xarray as xr
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.animation as animation # animation
-import imageio 
 
 import fiona
 from shapely.geometry import shape
@@ -19,10 +18,11 @@ import functions
 from functions import read_shapefile
 
 common_years = np.arange(2005,2017)
+regions_ids = np.arange(1, 37)
 
 # read shapefile
 shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
-df = read_shapefile(shape_file)
+df = read_shapefile(shape_file,regions_ids)
 
 root = '/bettik/millanr/DATA_SERVER/ANTARCTICA/OCEANICE/COASTLINE/JPL_iceshelves_geometry/FILES_FOR_FRANCESCO/JPL_iceshelves_geometryJPL_antarctic_coastline_'
 end = '_filled.tif'
@@ -34,6 +34,9 @@ sea_mask = pd.DataFrame(index = df.index, columns = common_years)
 grounded_ice_mask = pd.DataFrame(index = df.index, columns = common_years)
 
 for id in df.index:
+
+    print('Processing region: ' + str(id))
+
     for year in common_years:
         tif_path = root + str(year) + end
         with rasterio.open(tif_path, crs = 'EPSG:3031') as src:

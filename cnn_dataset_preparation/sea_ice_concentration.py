@@ -116,6 +116,13 @@ def sea_ice_concentration(region_id):
 
             sea_ice_tmp = sic.loc[id, year]
             nan_mask = np.isnan(sea_ice_tmp)
+
+        # Check if the array is empty or only contains NaN values
+            if sea_ice_tmp.size == 0 or np.all(nan_mask):
+                print(f"Skipping inpainting for region {id}, year {year} due to empty or all-NaN array.")
+                sic_interpolated.loc[id, year] = sea_ice_tmp  # Keep it as is or fill with a default value
+                continue
+
             sea_ice_tmp = inpaint.inpaint_biharmonic(sea_ice_tmp, nan_mask)
             sea_ice_tmp = np.where(~sea_mask.loc[id,year] , 0, sea_ice_tmp)
 

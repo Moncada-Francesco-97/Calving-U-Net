@@ -5,14 +5,16 @@ import thickness as thickness
 import basal_melting as melting
 import velocity as vel
 import sea_ice_concentration as sea_ice
+import masks_dataset as masks
 
 print(f'Processing region {sys.argv[1]}, we are into bat_region.py')
 
 def process_region(region_number):
-    #thickness.thickness(region_number)
-    #melting.basal_melting(region_number)
+    thickness.thickness(region_number)
+    melting.basal_melting(region_number)
     vel.velocity(region_number)
     sea_ice.sea_ice_concentration(region_number)
+    masks.masks_dataset(region_number)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
