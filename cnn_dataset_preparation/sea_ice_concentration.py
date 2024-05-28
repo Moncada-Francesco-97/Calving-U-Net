@@ -20,6 +20,8 @@ import importlib
 
 common_years = np.arange(2005, 2017, 1)
 
+#The sea_ice_concentration function extracts the sea ice concentration for a given region, interpolates in the areas where data is missing,
+# and saves the interpolated values as a numpy array. Since the tif data files are monthly, an yearly avarage is performed.
 
 def sea_ice_concentration(region_id):
 
@@ -80,11 +82,10 @@ def sea_ice_concentration(region_id):
                     window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform) 
                     image = src.read(1, window=window) #this is bm in the window
 
-                    print('Year: ' + str(year) + ' Month: ' + str(i) + ' Image shape: ' + str(image.shape))
                     image_avg = image_avg + image
                     
                     if i == 11:
-                        # print('Saved till month ' + str(j))
+
                         image_avg = image_avg/12
                         sic.loc[id,year] = image_avg
                         month = month + 12

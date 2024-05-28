@@ -17,4 +17,17 @@ blocks_variables_histograms.pdf
 /dataset_tif_interpolated/bm_interpolated_cubic_with_zero.npy
 /dataset_tif_interpolated/thickness_tif_interpolated.npy
 /dataset_tif_interpolated/normalised/
+/dataset_tif_interpolated/
 /dataset_cnn/
+/Dataset preparation/
+/XGBoost/
+/U-Net/data_preprocessing.ipynb
+/U-Net/dataset_organisation.ipynb
+/U-Net/u_net.ipynb
+/cnn_dataset_preparation/basal_melting.ipynb
+/cnn_dataset_preparation/creating_masks.ipynb
+/cnn_dataset_preparation/prove.ipynb
+/cnn_dataset_preparation/reshaping.ipynb
+/cnn_dataset_preparation/sea_ice_concnetration.ipynb
+/cnn_dataset_preparation/velocity.ipynb
+

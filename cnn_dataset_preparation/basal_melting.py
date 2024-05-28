@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 #from sklearn.metrics import r2_score
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.animation as animation # animation
 import imageio 
 import fiona
 import rasterio
@@ -20,6 +18,10 @@ from scipy.interpolate import griddata
 from scipy.interpolate import RegularGridInterpolator
 
 
+# This function reads the basal melting files and make an interpolation in the regions where we know ice shelf is present but data are missing in the original dataset.
+#I filled the boarders with the 30th percentile of the basal melting values. This choice was made as a trial and error process.
+#It processes one region at a time. The region_id is the id of the region in the shapefile.
+
 def basal_melting(region_id):
 
     common_years = np.arange(2005, 2017, 1)
@@ -29,14 +31,14 @@ def basal_melting(region_id):
     from functions import read_shapefile
     df = read_shapefile(shape_file, region_id)
 
-    # Load the masks
+    # Load the masks  containing the ice, land, sea, grounded ice and boarders
     importlib.reload(functions)  # Reload the module
     from functions import load_masks
     mask_directory = '/bettik/moncadaf/data/masks/'
 
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(mask_directory, df, common_years)
 
-
+    # Root of the basal melting files 
     root = '/bettik/moncadaf/data/basal_melting/melt_' 
     end = '_warp_ps.tif'
 
@@ -51,12 +53,13 @@ def basal_melting(region_id):
 
     for id in df.index:
 
-        xmin, ymin, xmax, ymax = df['boundaries'].loc[id]
+        xmin, ymin, xmax, ymax = df['boundaries'].loc[id] #load the boundaries of the region
 
         for year in common_years:
 
             file_name = root + str(year) + end
 
+            #Open the tif file
             with rasterio.open(file_name, crs = 'EPSG:3031') as src:
 
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform) #this is bm
@@ -77,6 +80,8 @@ def basal_melting(region_id):
 
     interpolated_values = pd.DataFrame(index = df.index, columns = common_years)
 
+
+    #Make the interpolation
     for id in df.index:
         for year in common_years:
 

@@ -17,10 +17,52 @@ import functions
 import importlib
 import sys
 
+####CODE DESCRIPTION#######
+
+#This code is used to load and interpolate the ice velocity data. Compared to the other variables, the ice velocity dataset has been more complicate to interpolate,
+#due to the many missing data points. The code takes as reference the ice shelf geometry provided in the work of Green et al.(2022), and is structured in the following way:
+
+###BLOCK 1: Introduce the function, load the masks and the velocity data, both multi year and single year, and smooth and threshold the data.
+    #The multi year file is the result of a multi-year average, and has almost a complete coverage of the Antarctic continent.
+    #The single year files are the yearly velocity data, which have a lot of missing data points. 
+
+
+###BLOCK 2: Create the masks for the ice shelves and perform a first interpolation. 
+
+# Since we wanted to exploit at maximum the data points inside ice shelves, we decided to spatially interpolate the missing data twice,
+# once in the floating ice and later including also the grounded ice.
+# To look directly on the ice shelf floating ice (and not on the overall quantity of floating ice), we managed to divide ice shelf by ice shelf by labeliing the connected regions of floating ice,
+# so that each ice shelf has an unique label; this was done thanks to the label library. We then checked the coverage of each ice shelf, and if it was larger than 70%, we kept the data and
+# performed spatial interpolation, otherwise we set the data to 0.
+# After this process I merge the interpolated data of the floatinng ice shelves with the original data of the grounded ice.
+# Also in this case I check  wether the coverage of this new region is larger than 70%, and if so I inerpolate spatially.
+
+###BLOCK 3: Perform a pixel by pixel time interpolation of the data, for region where coverage is less than 70%.
+#To maximise the exploitation of available data, and since we have years where data coverage is really poor, we perform a second interpolation in time, pixel by pixel.
+# To do so is necessary to reshape the dataset in order to have a for each pixel a time serie from which is possible to interpolate the missing values.
+#To make this interpolation we decided to act not directly on the velocity data, but on the ratio between the single year velocity and the multi year velocity, which we used as benchline.
+# Having performed this interpolation, we multiply the ratio matrix with the multi year velocity, to rescale it.
+# In doing this process, we avoided to extrapolate, and in case the first(s) or last(s) values of the time serie were missing, we set it to the closest in time non missing value.
+
+#BLOCK 4: Perform the final interpolation of the data, and save the results.
+# To take into account front advance we created a mask which include the regions where we have 0 values in the multi year velocity dataset (which means that we are in the sea according to this dataset),
+# but we have floating ice according to Green dataset (which means that a front advance happened instead).
+# We then interpolate the data in those regions, and we save the final dataset.
+
+#N.B: In the code there are many 'tailored' solution for the Amundsen Bay region, where many data were added to take into account the evolution of the ice shelves,
+# in particular Pine Island and Thwaites.
+
+
+
 def velocity(region_id):
 
+    #BLOCK 1
+
     #Functions ########################################
+
     def interpolation_excluding_extreames(A):
+        #This function interpolates the nan values in the array A, excluding the first and last values if they are nan,
+        #and the second and second to last if they are nan. This is to avoid the case where the first and last values are nan
 
         A = np.array(A)
 
@@ -49,6 +91,7 @@ def velocity(region_id):
 
 
     def fill_first_values(A):
+        #This function fills the first nan values with the first non nan value
 
         A = np.array(A)
 
@@ -64,6 +107,7 @@ def velocity(region_id):
     common_years = np.arange(2005,2017)
 
 
+    #I set a threshold for the interpolation, if the coverage is larger than 70% I use the original data, otherwise I interpolate
     threshold_interpolation = 0.7
 
     # read shapefile
@@ -79,11 +123,12 @@ def velocity(region_id):
     # Load the masks
     mask_directory = '/bettik/moncadaf/data/masks/'
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(mask_directory, df, common_years)
+
     ####################################################################
 
 
 
-    #MULTI YEAR VELOCITY ########################################################
+    #MULTI YEAR VELOCITY (does not change through time) ########################################################
     velocity_multy_years_x_path = '/bettik/moncadaf/data/ice_velocity/velocity_multi_years_X.tif'
     velocity_multy_years_y_path = '/bettik/moncadaf/data/ice_velocity/velocity_multi_years_Y.tif'
 
@@ -98,9 +143,7 @@ def velocity(region_id):
                     xmin, ymin, xmax, ymax = df.loc[id, 'boundaries']
                     window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
                     velocity_multy_years_x.loc[id, 'image'] = src.read(1, window=window)
-                    velocity_multy_years_x.loc[id, 'image'][velocity_multy_years_x.loc[id, 'image']==0] = np.nan
-
-                    print('The shape of the velocity_multy_years_x is', velocity_multy_years_x.loc[id,'image'].shape)
+                    velocity_multy_years_x.loc[id, 'image'][velocity_multy_years_x.loc[id, 'image']==0] = np.nan #Note that I set to nan all the 0 values. This is useful later
 
             with rasterio.open(velocity_multy_years_y_path, crs = 'EPSG:3031') as src:
                     xmin, ymin, xmax, ymax = df.loc[id, 'boundaries']
@@ -108,14 +151,11 @@ def velocity(region_id):
                     velocity_multy_years_y.loc[id,'image'] = src.read(1, window=window)
                     velocity_multy_years_y.loc[id, 'image'][velocity_multy_years_y.loc[id, 'image']==0] = np.nan
 
-                    print('The shape of the velocity_multy_years_y is', velocity_multy_years_y.loc[id,'image'].shape)
-
     ####################################################################
 
 
 
-
-    #EXTRACTING SINGLE YEAR VELOCITY ########################################
+    #EXTRACTING SINGLE YEAR VELOCITY (does change through time) ########################################
     list_x = []
     list_y = []
 
@@ -139,7 +179,7 @@ def velocity(region_id):
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
                 image_x = src.read(1, window=window)
 
-                #Exclude the 0.01 and 99.99 percentile
+                #Exclude the 0.01 and 99.99 percentile (easiest way to exclude the outliers)
                 values = np.nanpercentile(image_x.ravel(), [0.05, 99.95])
                 image_x[image_x < values[0]] = np.nan
                 image_x[image_x > values[1]] = np.nan
@@ -171,7 +211,7 @@ def velocity(region_id):
     velocity_y_tif_smoothed = velocity_y_tif.copy()
 
     kernel_size = 4
-    threshold = 50
+    threshold = 50 
 
     for id in df.index:
         for year in common_years:
@@ -180,27 +220,29 @@ def velocity(region_id):
             vx_tmp_smoothed = medfilt2d(velocity_x_tif_smoothed.loc[id, year], kernel_size)
             vy_tmp_smoothed = medfilt2d(velocity_y_tif_smoothed.loc[id, year], kernel_size)
 
-            #thresholding
+            #thresholding (excluding those pixels whose difference before and after thresholding has surpassed 50 m/year)
             velocity_x_tif_smoothed.loc[id, year][abs(velocity_x_tif_smoothed.loc[id, year] - vx_tmp_smoothed) > threshold] = np.nan
             velocity_y_tif_smoothed.loc[id, year][abs(velocity_y_tif_smoothed.loc[id, year] - vy_tmp_smoothed) > threshold] = np.nan
 
-    ####################################################################
-    #print('Single year velocity loaded, smoothed and thresholded')
+    ##########################################################################
 
 
-    #Special Treatment for Pine Island ######################################## 
-    #Here I interpolate the missing values in the region of Pine Island
+    #Special Treatment for Amundsen Bay ######################################## 
+ 
     if region_id == 24:
         from skimage.restoration import inpaint
-        print('Pine Island specific treatment, first treatment')
+        print('Amundsen Bay specific treatment, first treatment: interpolation of the missing values in specific regions, namely Pine Island and Thwaites')
         
         year = 2011
         mask_nan = np.isnan(velocity_x_tif_smoothed.loc[24, year][120:200, 300:450])
         velocity_x_tif_smoothed.loc[24, year][120:200, 300:450] = inpaint.inpaint_biharmonic(velocity_x_tif_smoothed.loc[24, year][120:200, 300:450], mask_nan)
         mask_nan_2 = np.isnan(velocity_y_tif_smoothed.loc[24, year][120:200, 300:450])
         velocity_y_tif_smoothed.loc[24, year][120:200, 300:450] = inpaint.inpaint_biharmonic(velocity_y_tif_smoothed.loc[24, year][120:200, 300:450], mask_nan_2)
-
     ####################################################################
+
+
+
+    #BLOCK 2: 
 
 
     #Create the masks for the ice shelves ########################
@@ -217,14 +259,14 @@ def velocity(region_id):
 
             combined_mask = ice_shelf_mask | ice_shelf_grounded_ice_mask
 
-            # Perform connected component labeling on the mask
+            # Perform connected component labeling on the mask (identify as an ice shelf any connected region of ice)
             labeled_mask, num_labels = label(combined_mask)
 
             # Create a new array to hold the labeled mask with unique labels for each ice shelf
             labeled_combined = np.zeros_like(labeled_mask)
 
             # Assign unique labels to each ice shelf
-            for label_idx in range(1, num_labels + 1):  # Start from 1 to exclude background label
+            for label_idx in range(1, num_labels + 1):  # Start from 1 to exclude background label, which is categorised as 0
                 ice_shelf = labeled_mask == label_idx
                 labeled_combined[ice_shelf] = label_idx
 
@@ -239,7 +281,7 @@ def velocity(region_id):
         for year in common_years:
 
             prova = ice_shelves_masks.loc[id,year]
-            prova_id = number_of_ice_shelves.loc[id,year]
+            prova_id = number_of_ice_shelves.loc[id,year] #contains the number of ice shelves in the region
 
             prova_filtered = prova.copy()
             ice_shelves_numbers = np.arange(1,prova_id+1,1)
@@ -247,14 +289,16 @@ def velocity(region_id):
             #From here we are working on the single ice shelf
             j = 0
 
-            for i in range(1,prova_id+1):
+            #In this cycle I check wether for each ice shelf the coverage is larger than 70%.
+            #If is larger--> I keep the values f velocity stored in velcoity_x_tif
+            #If is smaller--> I set the values of the ice shelf to 0
 
-                ice_shelf_mask = prova == ice_shelves_numbers[j] #Get the mask of ice shelf number n
+            for i in range(1,prova_id+1): #Iterating over the ice shelves of the region
+
+                ice_shelf_mask = prova == ice_shelves_numbers[j] #Get the mask of ice shelf number i
                 ice_shelf_mask = ice_shelf_mask.astype(bool) #convert ice_shelf_mask to boolean
 
-                print('For year', year, 'and ice shelf number', ice_shelves_numbers[j], 'the shape of the velocity_x_tif_smoothed is', velocity_x_tif_smoothed.loc[id, year].shape)
-
-                #Select the data from data_in_ice_shelf which are in the region ice_shelf_mask
+                #Look in the velocity_x_tif dataset at velocity values of the pixels of ice shelf number i 
                 data_in_ice_shelf_roi = np.where(ice_shelf_mask, velocity_x_tif.loc[id, year], np.nan)
 
                 # Count the number of non-NaN pixels in the masked data_in_ice_shelf_roi
@@ -269,12 +313,12 @@ def velocity(region_id):
                 if ratio_non_nan_to_true < 0.7:
 
                     prova_filtered = np.where(prova_filtered == ice_shelves_numbers[j], 0, prova_filtered)
-                    #print('Ice shelf number ', ice_shelves_numbers[i], ' has been filtered out')
+
                 j = j+1
 
             masks_filtered.loc[id,year] = prova_filtered
 
-    #Convert all the mask to the same boolean format
+    #Convert all the mask to the same boolean format. mask_filtered is now storing the masks of the ice shelves with coverage larger than 70%
     for id in df.index:
         for year in common_years:
             masks_filtered.loc[id,year] = masks_filtered.loc[id,year].astype(bool)
@@ -287,7 +331,7 @@ def velocity(region_id):
 
     ####################################################################
 
-    #print('Ice shelf masks created, right before interpolation')
+
     #interpolate into the ice shelf mask ########################################
     from skimage.restoration import inpaint
 
@@ -295,22 +339,21 @@ def velocity(region_id):
 
     for id in df.index:
         for year in common_years:
-            # Check if all elements in the mask for the current year are NaN
+
+            # Check if all elements in the mask for the current year are NaN. There are certain regions for particular years where there is absolutely no data.
             if not masks_filtered.loc[id,year].any():
                 # If all elements are NaN, set all elements of the interpolated_floating_ice_x to NaN
                 interpolated_floating_ice_x.loc[id, year] = np.nan
                 print('All elements in the mask for the year', year, 'are NaN')
                 continue  # Skip the current year and proceed to the next one
 
-            # Otherwise, perform interpolation as usual
+            # Otherwise, perform spatial interpolation 
             data_tmp = np.where(masks_filtered.loc[id, year], velocity_x_tif_smoothed.loc[id, year], np.nan)
             data_tmp = np.where(~masks_filtered.loc[id, year], velocity_x_tif_smoothed.loc[id, year], data_tmp)
             nan_mask = np.isnan(data_tmp)
 
             interpolated_floating_ice_x.loc[id, year] = inpaint.inpaint_biharmonic(data_tmp, nan_mask)
-            interpolated_floating_ice_x.loc[id, year][~masks_filtered.loc[id, year]] = np.nan
-
-            #print('The shape of the interpolated_floating_ice_x for the year', year, 'is', interpolated_floating_ice_x.loc[id, year].shape)
+            interpolated_floating_ice_x.loc[id, year][~masks_filtered.loc[id, year]] = np.nan #Here I re set to nan all the regions which are not ice shelf
 
 
     #Now i interpolate the grounded ice for x
@@ -323,17 +366,15 @@ def velocity(region_id):
             #load original data for the land
             data_tmp = velocity_x_tif_smoothed.loc[id,year]
 
-            #load the  interpolated data for the floating ice
+            #load the interpolated data for the floating ice shelves
             data_tmp_all_ice = np.where(masks_filtered.loc[id,year], interpolated_floating_ice_x.loc[id,year], data_tmp)
             nan_mask = np.isnan(data_tmp_all_ice)
 
-            #Calculate the coverage ratio
+            #Calculate the coverage ratio between the non-NaN pixels and the True pixels, in everything which is not sea
             num_non_nan_pixels = np.sum(~np.isnan(data_tmp_all_ice))
             num_true_pixels = np.sum(~sea_mask.loc[id,year])
 
             coverage_ratio_x.loc[id,year] = num_non_nan_pixels/num_true_pixels
-
-            #print('The ratio of non-NaN pixels to True pixels in x for the year', year, 'is', coverage_ratio_x.loc[id,year])
 
             interpolated_ice_x.loc[id,year] = data_tmp_all_ice
 
@@ -396,9 +437,8 @@ def velocity(region_id):
     ####################################################################
 
 
-
-    #print('First interpolation done, now i start with Specific treatments fo Twhaites')
-    #Specific treatment for Pine Island in year 2006 
+    #Specific treatment for Amundsen Bay ########################################
+    #Specific treatment for Pine Island in year 2006 (Coverage was sufficiently good to interpolate the missing values)
     if region_id == 24:
         mask_nan_pi = np.isnan(interpolated_ice_y.loc[region_id,2006][100:175, 420:440])
         interpolated_ice_y.loc[region_id,2006][100:175, 420:440] = inpaint.inpaint_biharmonic(interpolated_ice_y.loc[region_id,2006][100:175, 420:440], mask_nan_pi)
@@ -406,8 +446,12 @@ def velocity(region_id):
     ####################################################################
 
 
-    #Calcualtating the ratios on the whole ice #######################################
-    ratios_x = pd.DataFrame(index = df.index, columns = common_years)
+
+    #BLOCK 3
+
+    #Calcualtating the ratios for each pixel on the whole ice #######################################
+    #With ratio from now on I will intend the pixel-wise ratio between the ice velocity and the multi year velocity
+    ratios_x = pd.DataFrame(index = df.index, columns = common_years) #this variable stores the ratio for each pixel (for each year) between the ice velocity (time dipendent) and the multi year velocity (not depending on time)
 
     for id in df.index:
         for year in common_years:
@@ -444,7 +488,7 @@ def velocity(region_id):
     ####################################################################
                 
 
-    #Reshaping the dataset in order to perform pixel by pixel interpolation ############################     
+    #Reshaping the dataset in order to perform pixel by pixel interpolation. ############################     
     raveled_vector_x = np.zeros((len(df.index),len(ratios_x.loc[id, year].ravel()), len(common_years))) 
 
     index = 0
@@ -483,8 +527,8 @@ def velocity(region_id):
 
 
 
-    print('Interpolation pixel by pixel started')
-    #step by step interpolation  x ########################################################
+    print('Interpolation pixel by pixel')
+    #pixel by pixel interpolation  x ########################################################
 
     for i in range(len(df.index)): #for each region
         for j in range(len(ratios_x.loc[id, year].ravel())): #for each pixel of the region
@@ -503,7 +547,7 @@ def velocity(region_id):
 
             raveled_vector_x[i, j, :] = x
 
-    #step by step interpolation  y
+    #pixel by pixel interpolation  y
         
     for i in range(len(df.index)): #for each region
         for j in range(len(ratios_y.loc[id, year].ravel())): #for each pixel of the region
@@ -558,7 +602,7 @@ def velocity(region_id):
     ####################################################################
         
 
-    #re-creating the velocity dataset, with holes
+    #re-creating the velocity dataset, combining the single year velocity and rescaling the multi year velocity with the interpolated ratio
 
     velocity_multi_and_single_x = pd.DataFrame(index = df.index, columns = common_years)
     velocity_multi_and_single_y = pd.DataFrame(index = df.index, columns = common_years)
@@ -566,13 +610,16 @@ def velocity(region_id):
     for id in df.index:
         for year in common_years:
 
-            #Here we just use the inteporlated images, where the coverage is good
+            #Here we just use the spatial inteporlated images, where the coverage is good
             if coverage_ratio_x.loc[id, year] >= threshold_interpolation:
                 velocity_multi_and_single_x.loc[id, year] = interpolated_ice_x.loc[id, year]
-                
+
+            #When the coverage is not sufficient we rescale the multi year velocity with the interpolated ratio  
             if coverage_ratio_x.loc[id, year] < threshold_interpolation:
                 velocity_multi_and_single_x.loc[id, year] = interpolated_ratios_x.loc[id, year] * velocity_multy_years_x.loc[id, 'image']
 
+            #Same for y
+                
             if coverage_ratio_y.loc[id, year] >= threshold_interpolation:
                 velocity_multi_and_single_y.loc[id, year] = interpolated_ice_y.loc[id, year]
 
@@ -582,13 +629,16 @@ def velocity(region_id):
             
 
 
+    #BLOCK 4
+
     #Multy year velocity x and y have the same nans, so we can use the same mask for both.
-    #This mask presents the regions where we have nan in multi years AND floating ice
+    #This mask presents the regions where we have nan values in multi years BUT we have floating ice according to Green. 
+    #In this way we identify the front advance, since we set the 0 values of the multi-year velocity to nan
     green_and_multi = pd.DataFrame(index = df.index, columns = common_years) ############################
 
     for id in df.index:
 
-        #To chenge in velocity_multy_years_x.loc[id, 'image']==0 if it has not been set to nan
+        #To cheange in velocity_multy_years_x.loc[id, 'image']==0 if it has not been set to nan
         mask_nan_in_multi_year = np.isnan(velocity_multy_years_x.loc[id, 'image'])
 
         for year in common_years:
@@ -598,7 +648,7 @@ def velocity(region_id):
                 
 
 
-    #Specific treatment for Thwaites ########################################
+    #Specific treatment for Amundsen bay region ########################################
     #Here i fill the boarders of the Thwaites ice shelf with the average velocity of the ice shelf region
     if region_id == 24:
 
@@ -635,10 +685,12 @@ def velocity(region_id):
         pine_island_boarder = pd.DataFrame(index = df.index, columns = common_years)
         thwaites_boarders = pd.DataFrame(index = df.index, columns = common_years)
 
+        #Here I calculate the average velocity in the sliced regions
+
         for id in df.index:
             for year in common_years:
 
-                #Here we look at the average velocity in the boarders of the two regions, usign theoriginal data
+                #Here we look at the average velocity in the boarders of the two regions, usign the original data
                 pine_island_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region1_slice])
                 thwaites_boarders_average_x.loc[id,year] = np.nanmean(velocity_x_tif_smoothed.loc[id, year][region2_slice])
 
@@ -655,17 +707,13 @@ def velocity(region_id):
                 #where we have both ice and boarders
                 ice_board = np.logical_and(board, ice)
 
-                #creating background for PI and Th
+                #creating background for PI and Thwaites
                 back_ground_pi = np.full_like(ice, fill_value=False)
                 back_ground_th = np.full_like(ice, fill_value=False)
 
                 #The slices for the regions of interest
                 back_ground_pi[region1_slice] = ice_board[region1_slice]
                 back_ground_th[region2_slice] = ice_board[region2_slice]
-
-                #Expand the boarders of 10 pixels
-                #back_ground_pi = ndimage.binary_dilation(back_ground_pi, iterations=iterations)
-                #back_ground_th = ndimage.binary_dilation(back_ground_th, iterations=iterations)
 
                 #saving the boarders
                 pine_island_boarder.loc[id, year] = back_ground_pi
@@ -686,8 +734,8 @@ def velocity(region_id):
 
 
 
-    print('Second interpolation started, after emptying the Green and multi mask regions')
-    #Emptying the Green and Multi mask regions and performing the inteprolation on those regions
+ 
+    #Emptying the Green and Multi mask regions and performing the spatial interpolation on those regions
 
     #Interpolation for x
     v_x_final = pd.DataFrame(index = df.index, columns = common_years)
@@ -698,10 +746,9 @@ def velocity(region_id):
             prova = velocity_multi_and_single_x.loc[id, year]
             prova[green_and_multi.loc[id, year]] = np.nan
 
-            #Creating the boarders for Thwaites
+            #Inserting manually the boarders for Thwaites
             if region_id == 24:
                 prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_x.loc[id, year]
-            #prova[pine_island_boarder.loc[id,year]] = pine_island_boarders_average_x.loc[id, year]
                 
             mask_nan = np.isnan(prova)
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
@@ -710,7 +757,7 @@ def velocity(region_id):
             v_x_final.loc[id, year] = prova 
 
 
-    #Interpolation for y
+    #Same for y
     v_y_final = pd.DataFrame(index = df.index, columns = common_years)
 
     for id in df.index:
@@ -721,7 +768,6 @@ def velocity(region_id):
 
             if region_id == 24:
                 prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_y.loc[id, year]
-                #prova[pine_island_boarder.loc[id,year]] = pine_island_boarders_average_x.loc[id, year]
 
             mask_nan = np.isnan(prova)
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
@@ -753,6 +799,8 @@ def velocity(region_id):
 
     i = 0
     id = region_id
+
+######### Another partcular treatment, for years which were particularly damaged in the dataset.    
     if region_id == 24:
         for year in [2011,2012,2013]:
             
@@ -791,7 +839,8 @@ def velocity(region_id):
             i = i + 1
 
 
-    #Modifying the final dataset for the years 2011, 2012, 2013
+    #Modifying the final dataset for the years 2011, 2012, 2013 for the region of Amundsen Bay
+            
     v_x_final_3 = pd.DataFrame(index = df.index, columns = common_years)
     v_y_final_3 = pd.DataFrame(index = df.index, columns = common_years)
 

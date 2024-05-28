@@ -49,8 +49,9 @@ index_tot = generate_index(n_features, n_targets)
 
 
 #IMPORTANT: ONE OF THE TWO FOLLOWING LINE NEED TO BE COMMENTED!!!!!!!!!!!!!!!!
-cross_strategy = 'Attention_NUMBER_' + str(model_number)
-n_epochs = 25
+cross_strategy = 'Attention_batch_30_epoch_30_NUMBER_' + str(model_number)
+n_epochs = 30
+batch_size = 30
 
 #This function generates the temporal folders
 cv_features, cv_targets, X_test, y_test = temporal_folders(features, targets, index_tot)
@@ -119,7 +120,7 @@ print('the lenght of feature is ', len(cv_features))
 X_val_train = np.array(np.concatenate([cv_features[j] for j in range(len(cv_features)) if j != i]))
 y_val_train = np.array(np.concatenate([cv_targets[j] for j in range(len(cv_targets)) if j != i]))
 
-history = model.fit(X_val_train, y_val_train, batch_size = 20, epochs = n_epochs, verbose = 1, validation_data = (X_val_test, y_val_test))
+history = model.fit(X_val_train, y_val_train, batch_size = batch_size, epochs = n_epochs, verbose = 1, validation_data = (X_val_test, y_val_test))
 
 model_dir = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/model_architecture/'
 

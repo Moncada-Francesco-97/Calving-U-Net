@@ -25,9 +25,13 @@ from scipy.interpolate import griddata
 
 common_years = np.arange(2005,2017)
 
+# thickness function extract thickness and interpolate in the areas where data is missing. 
+# In the boarders we set the 30th percentile of the thickness when we had no data. Thois choice is the result of a trial and error process.
+# The ice shelf's sourrounding thickness was integrated with data from BedMachine v3
+
 def thickness(region_id):
+
     # read shapefile
-    #print(f'Processing region {region_id}, we are into thickness.py')
     shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
 
@@ -38,8 +42,6 @@ def thickness(region_id):
 
     cnn_dataset_directory = '/bettik/moncadaf/data/masks/'
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(cnn_dataset_directory, df, common_years)
-
-    #print('Masks loaded')
 
 
     #need to create the list of tif files
@@ -72,12 +74,9 @@ def thickness(region_id):
 
                 thickness_paolo.loc[id, year] = thickness_paolo_tmp
 
-    
-    #print('Paolo thickness loaded')
+    bed_machine_file = '/bettik/moncadaf/data/shapefiles_antarctica/Bed_Machine_thickness.tif'
 
-    bed_machine_file = '/bettik/moncadaf/data/shapefiles_antarctica/Bed_Machine_thickness.tif' #Change in cluseter
-
-    # I need to open bed machine
+    # Integrating with BedMachine data (emptied where there is ice according to Greene mask)
     thickness = pd.DataFrame(index=df.index, columns=common_years)
 
     for id in df.index:
@@ -88,21 +87,16 @@ def thickness(region_id):
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
                 image = src.read(1, window=window) #this is bed machine
 
-                print('The shape of the bed_machine for the year {} is {}'.format(year, image.shape))
-
                 # Here I am removing pixels where there is ice (according to Greene mask)
                 image = np.where(ice_mask.loc[id, year] == True, np.nan, image)
 
-                #Here i am putting paolo thicness where paolo is not nan, and leaving bed machine where paolo is nan
+                #Here i am putting Paolo thickness where Paolo is not nan, and leaving bed machine where paolo is nan
                 image = np.where(~np.isnan(thickness_paolo.loc[id, year]), thickness_paolo.loc[id, year], image)
 
                 thickness.loc[id, year] = image
 
 
-    #Interpolation 
-
-    print('Right before thicknes interpolation')
-
+    #Second interpolation with BedMachine data
     interpolated_thickness_cnn_values_2 = pd.DataFrame(index=df.index, columns=common_years)
 
     for id in df.index:

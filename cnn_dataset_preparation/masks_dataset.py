@@ -31,7 +31,6 @@ def masks_dataset(region_id):
     root = '/bettik/millanr/DATA_SERVER/ANTARCTICA/OCEANICE/COASTLINE/JPL_iceshelves_geometry/FILES_FOR_FRANCESCO/JPL_iceshelves_geometryJPL_antarctic_coastline_'
     end = '_filled.tif'
 
-
     masks_region = pd.DataFrame(index = df.index, columns = common_years)
 
     for id in df.index:
@@ -44,7 +43,6 @@ def masks_dataset(region_id):
                 image = src.read(1, window=window)
 
                 masks_region.loc[id, year] = image
-
 
     #save the masks as numpy arrays
     saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'

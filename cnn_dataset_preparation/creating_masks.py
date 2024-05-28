@@ -17,6 +17,9 @@ import sys
 import functions
 from functions import read_shapefile
 
+
+#In this file I create for each region the masks for the ice, land, sea, grounded ice, and the boarders
+
 common_years = np.arange(2005,2017)
 regions_ids = np.arange(1, 37)
 
