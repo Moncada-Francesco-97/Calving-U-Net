@@ -1,5 +1,8 @@
 # CNN Dataset Preparation
 
+![dataset_iter](https://github.com/Moncada-Francesco-97/machine_learning_calving_project/assets/110817494/9036a482-f402-4be7-b83d-6b3234ef24bd)
+
+
 In this directory is stored the code to create the dataset. The .ipynb files were used to test locally the code, while the python ones are used directly on the cluster
 
 [creating_mask.py](creating_masks.py): this file creates the regional masks for floating ice, grounded ice. It requires the shape file with the locations of the regions, and the tif file containing the ice shelf geometry.
