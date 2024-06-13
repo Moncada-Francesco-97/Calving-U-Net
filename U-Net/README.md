@@ -19,12 +19,12 @@ The training dataset was divided according to the block strategy recommended by 
 
 - **[try_model.py](try_model.py)**:
   - This file was created to test if the architecture was working. It train the model on a subset of the training test.
-
-- **[conda_environment.txt](conda_environment.txt)**:
-  - Contains the conda environment specifications used to develop the code.
  
 - **[make_job.py](make_job.py)**:
   - Script to launch the job on the cluster
+ 
+- **[conda_environment.txt](conda_environment.txt)**:
+  - Contains the conda environment specifications used to develop the code.
 
 ### Perspectives
 
