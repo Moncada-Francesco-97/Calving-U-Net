@@ -23,7 +23,7 @@ The training dataset was divided according to the block strategy recommended by 
 
 ### Perspectives
 
-At the current state, the model is un able to predict large calving events. For furure developement, two possible implementations are possible:
+At the current state, the model is not able to predict large calving events. For furure developement, two possible implementations are possible:
 
 - **Edge-aware Attention**: Develop a specialized attention module within the U-Net that highlights edge features in the feature maps. This module should learn to focus on regions with edges and reduce the emphasis on less relevant background areas. For reference check out [Edge-aware U-Nets](https://www.sciencedirect.com/science/article/pii/S1746809421010697).
 
