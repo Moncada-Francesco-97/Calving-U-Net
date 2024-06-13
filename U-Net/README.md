@@ -19,3 +19,12 @@ The training dataset was divided according to the block strategy recommended by 
 
 - **[conda_environment.txt](conda_environment.txt)**:
   - Contains the conda environment specifications used to develop the code.
+
+
+### Perspectives
+
+At the current state, the model is un able to predict large calving events. For furure developement, two possible implementations are possible:
+
+- **Edge-aware Attention**: Develop a specialized attention module within the U-Net that highlights edge features in the feature maps. This module should learn to focus on regions with edges and reduce the emphasis on less relevant background areas. For reference check out [Edge-aware U-Nets](https://www.sciencedirect.com/science/article/pii/S1746809421010697).
+
+- **Edge Detection Loss**: Add an edge detection loss component in addition to the segmentation loss to explicitly train the model to detect edges. This loss function should penalize differences between the predicted and ground truth edge maps, encouraging the model to improve edge localization accuracy. For reference check out [Edge Detection Loss]([https://pdf.sciencedirectassets.com/777839/1-s2.0-S2666827021X00059/1-s2.0-S26668270210010[…]uY29t&ua=080c5f5f065702040102&rr=88f8deae2eac0b3a&cc=nl](https://pdf.sciencedirectassets.com/777839/1-s2.0-S2666827021X00059/1-s2.0-S26668270210010[…]uY29t&ua=080c5f5f065702040102&rr=88f8deae2eac0b3a&cc=nl.)).
