@@ -68,7 +68,7 @@ def create_oar_file(region_number):
 
 def main():
     # Iterate over regions from 1 to 28
-    for region_number in [14]:
+    for region_number in range(1, 37):
         print(f'Creating files for region {region_number}')
         create_oar_file(region_number)
 

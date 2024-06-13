@@ -28,13 +28,13 @@ def sea_ice_concentration(region_id):
     common_years = np.arange(2005, 2017, 1)
 
     # read shapefile
-    shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+    shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
 
     # Load the masks
     importlib.reload(functions)  # Reload the module
     from functions import load_masks
-    mask_directory = '/bettik/moncadaf/data/masks/'
+    mask_directory = '/bettik/moncadaf/dataset/produced_data/masks/'
 
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(mask_directory, df, common_years)
 
@@ -43,7 +43,7 @@ def sea_ice_concentration(region_id):
     #in this script i want to create a list of all the files i want to open
 
     # Define the root directory
-    root = '/bettik/moncadaf/data/sea_ice_concentration/'
+    root = '/bettik/moncadaf/dataset/raw_data/sea_ice_concentration/'
 
     # Define the list of files
     list_of_files = []
@@ -61,6 +61,7 @@ def sea_ice_concentration(region_id):
     #Averaging all the years
 
     sic = pd.DataFrame(index = df.index, columns = common_years)
+    sic_nan = pd.DataFrame(index = df.index, columns = common_years)
 
     for id in df.index:
 
@@ -90,13 +91,12 @@ def sea_ice_concentration(region_id):
                         sic.loc[id,year] = image_avg
                         month = month + 12
 
-
     # Now I want to put the ice and land, and grounded masks on top of the sic
 
     for id in df.index:
-        
+
             for year in common_years:
-        
+
                 sic.loc[id,year] = np.where(sic.loc[id,year]==251, np.nan, sic.loc[id,year])
                 sic.loc[id,year] = np.where(sic.loc[id,year]==252, np.nan, sic.loc[id,year])
                 sic.loc[id,year] = np.where(sic.loc[id,year]==254, np.nan, sic.loc[id,year])
@@ -113,8 +113,6 @@ def sea_ice_concentration(region_id):
     for id in df.index:
         for year in common_years:
 
-            #print(id, year)
-
             sea_ice_tmp = sic.loc[id, year]
             nan_mask = np.isnan(sea_ice_tmp)
 
@@ -124,14 +122,23 @@ def sea_ice_concentration(region_id):
                 sic_interpolated.loc[id, year] = sea_ice_tmp  # Keep it as is or fill with a default value
                 continue
 
+            #Interpolated values
+            sic_nan.loc[id, year] = sea_mask.loc[id,year] * nan_mask
+            sic_nan.loc[id, year] = np.where(~sea_mask.loc[id,year], False, sic_nan.loc[id, year])
+
             sea_ice_tmp = inpaint.inpaint_biharmonic(sea_ice_tmp, nan_mask)
             sea_ice_tmp = np.where(~sea_mask.loc[id,year] , 0, sea_ice_tmp)
 
             sic_interpolated.loc[id, year] = sea_ice_tmp
 
     #Save the interpolated values
-    saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'    
+    saving_directory = '/bettik/moncadaf/dataset/produced_data/sea_ice_concentration/'
 
     np.save(saving_directory + f'sic_region_{region_id}.npy', sic_interpolated)
+
+    saving_directory_nan = '/bettik/moncadaf/dataset/produced_data/interpolated_areas/sea_ice_concentration/'
+
+    np.save(saving_directory_nan + f'sic_nan_region_{region_id}.npy', sic_nan)
+
     print(f'Saved region {region_id}')
 

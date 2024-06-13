@@ -24,10 +24,10 @@ common_years = np.arange(2005,2017)
 regions_ids = np.arange(1, 37)
 
 # read shapefile
-shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
 df = read_shapefile(shape_file,regions_ids)
 
-root = '/bettik/millanr/DATA_SERVER/ANTARCTICA/OCEANICE/COASTLINE/JPL_iceshelves_geometry/FILES_FOR_FRANCESCO/JPL_iceshelves_geometryJPL_antarctic_coastline_'
+root = '/bettik/moncadaf/dataset/raw_data/coastlines/JPL_iceshelves_geometryJPL_antarctic_coastline_'
 end = '_filled.tif'
 
 
@@ -64,7 +64,7 @@ for id in df.index:
             grounded_ice_mask.loc[id, year] = grounded_ice_mask_tmp
 
 #save the masks as numpy arrays
-cnn_dataset_directory = '/bettik/moncadaf/data/masks/'
+cnn_dataset_directory = '/bettik/moncadaf/dataset/produced_data/masks/'
 np.save(cnn_dataset_directory + 'ice_mask.npy', ice_mask)
 np.save(cnn_dataset_directory + 'land_mask.npy', land_mask)
 np.save(cnn_dataset_directory + 'sea_mask.npy', sea_mask)

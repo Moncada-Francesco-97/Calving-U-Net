@@ -25,10 +25,10 @@ def masks_dataset(region_id):
     common_years = np.arange(2005,2017)
 
     # read shapefile
-    shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+    shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
 
-    root = '/bettik/millanr/DATA_SERVER/ANTARCTICA/OCEANICE/COASTLINE/JPL_iceshelves_geometry/FILES_FOR_FRANCESCO/JPL_iceshelves_geometryJPL_antarctic_coastline_'
+    root = '/bettik/moncadaf/dataset/raw_data/coastlines/JPL_iceshelves_geometryJPL_antarctic_coastline_'
     end = '_filled.tif'
 
     masks_region = pd.DataFrame(index = df.index, columns = common_years)
@@ -45,7 +45,7 @@ def masks_dataset(region_id):
                 masks_region.loc[id, year] = image
 
     #save the masks as numpy arrays
-    saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
+    saving_directory = '/bettik/moncadaf/dataset/produced_data/coastlines/'
 
     np.save(saving_directory + 'masks_region_' + str(region_id) + '.npy', masks_region)
 

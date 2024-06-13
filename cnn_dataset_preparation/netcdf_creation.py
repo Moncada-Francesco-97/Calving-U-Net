@@ -39,7 +39,7 @@ with fiona.open(region, "r") as shapefile:
         coords.append([xmin, ymin, xmax, ymax])
 
 root_dir = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
-netcdf_directory = '/bettik/moncadaf/data/netcdf_cnn_dataset/'
+netcdf_directory = '/bettik/moncadaf/dataset/netcdf/'
 
 for i in range(1,37):
 

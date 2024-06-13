@@ -26,7 +26,7 @@ def basal_melting(region_id):
 
     common_years = np.arange(2005, 2017, 1)
     # read shapefile
-    shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+    shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
 
     from functions import read_shapefile
     df = read_shapefile(shape_file, region_id)
@@ -34,12 +34,12 @@ def basal_melting(region_id):
     # Load the masks  containing the ice, land, sea, grounded ice and boarders
     importlib.reload(functions)  # Reload the module
     from functions import load_masks
-    mask_directory = '/bettik/moncadaf/data/masks/'
+    mask_directory = '/bettik/moncadaf/dataset/produced_data/masks/'
 
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(mask_directory, df, common_years)
 
     # Root of the basal melting files 
-    root = '/bettik/moncadaf/data/basal_melting/melt_' 
+    root = '/bettik/moncadaf/dataset/raw_data/melting/melt_' 
     end = '_warp_ps.tif'
 
     file_name_bm = []
@@ -49,6 +49,7 @@ def basal_melting(region_id):
 
     # I need to open bed machine
     bm = pd.DataFrame(index=df.index, columns=common_years)
+    bm_nan_mask = pd.DataFrame(index=df.index, columns=common_years)
     percentile_value = 30
 
     for id in df.index:
@@ -66,7 +67,11 @@ def basal_melting(region_id):
                 image = src.read(1, window=window) #this is bm in the window
 
                 bm_tmp = np.zeros_like(image, dtype = float)
+                
                 bm_tmp = image
+
+                #Save a mask which is true where there is ice shelf according to Green and nan according to the original data
+                bm_nan_mask.loc[id,year] = ice_mask.loc[id, year] * np.isnan(bm_tmp)
 
                 percentile = np.percentile(bm_tmp[~np.isnan(bm_tmp)], percentile_value) #calculating percentile
 
@@ -104,10 +109,15 @@ def basal_melting(region_id):
             bm_interpolated.loc[id,year] = np.where(ice_mask.loc[id,year] == True, bm_interpolated.loc[id,year], 0)
 
     #Save the interpolated values
-    saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
-
+    saving_directory = '/bettik/moncadaf/dataset/produced_data/melting/'
 
     np.save(saving_directory + 'bm_region_' + str(region_id) + '.npy', bm_interpolated)
+
+    #Saving nan values 
+    saving_nan_directory = '/bettik/moncadaf/dataset/produced_data/interpolated_areas/melting/'
+    np.save(saving_nan_directory + 'bm_nan_region_' + str(region_id) + '.npy', bm_nan_mask)
+
+
     print(f'Saved bm region {region_id}')
 
 

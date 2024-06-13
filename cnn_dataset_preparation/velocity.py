@@ -112,7 +112,7 @@ def velocity(region_id):
 
     # read shapefile
     from functions import read_shapefile
-    shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+    shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
 
 
@@ -121,7 +121,7 @@ def velocity(region_id):
     from functions import load_masks
 
     # Load the masks
-    mask_directory = '/bettik/moncadaf/data/masks/'
+    mask_directory = '/bettik/moncadaf/dataset/produced_data/masks/'
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(mask_directory, df, common_years)
 
     ####################################################################
@@ -129,8 +129,8 @@ def velocity(region_id):
 
 
     #MULTI YEAR VELOCITY (does not change through time) ########################################################
-    velocity_multy_years_x_path = '/bettik/moncadaf/data/ice_velocity/velocity_multi_years_X.tif'
-    velocity_multy_years_y_path = '/bettik/moncadaf/data/ice_velocity/velocity_multi_years_Y.tif'
+    velocity_multy_years_x_path = '/bettik/moncadaf/dataset/raw_data/velocity/velocity_multi_years_X.tif'
+    velocity_multy_years_y_path = '/bettik/moncadaf/dataset/raw_data/velocity/velocity_multi_years_Y.tif'
 
     #dataset
     velocity_multy_years_x =pd.DataFrame(index = df.index, columns = ['image'])
@@ -163,10 +163,13 @@ def velocity(region_id):
     velocity_x_tif = pd.DataFrame(index = df.index, columns = common_years)
     velocity_y_tif = pd.DataFrame(index = df.index, columns = common_years)
 
+    velocity_x_tif_nan = pd.DataFrame(index = df.index, columns = common_years)
+    velocity_y_tif_nan = pd.DataFrame(index = df.index, columns = common_years)
+
     #FILE LIST (change in cluster)
     for i in common_years:
-        list_x.append('/bettik/moncadaf/data/ice_velocity/' + f"{i}_{i+1}_VX.tif")
-        list_y.append('/bettik/moncadaf/data/ice_velocity/' + f"{i}_{i+1}_VY.tif")
+        list_x.append('/bettik/moncadaf/dataset/raw_data/velocity/' + f"{i}_{i+1}_VX.tif")
+        list_y.append('/bettik/moncadaf/dataset/raw_data/velocity/' + f"{i}_{i+1}_VY.tif")
 
     #calculate the velocity for each year, for each region
     for name_x, name_y, year in zip(list_x, list_y, common_years): #for each year
@@ -187,7 +190,8 @@ def velocity(region_id):
                 #set to nan all the 0 values
                 image_x[image_x == 0] = np.nan
                 velocity_x_tif.loc[id, year] = image_x
-                #print('The shape of the velocity_x_tif is', velocity_x_tif.loc[id,year].shape)
+                velocity_x_tif_nan.loc[id, year] = np.isnan(image_x)
+
 
             with rasterio.open(name_y, crs = 'EPSG:3031') as src:
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
@@ -201,7 +205,7 @@ def velocity(region_id):
                 #set to nan all the 0 values
                 image_y[image_y == 0] = np.nan
                 velocity_y_tif.loc[id, year] = image_y
-                #print('The shape of the velocity_y_tif is', velocity_y_tif.loc[id,year].shape)
+                velocity_y_tif_nan.loc[id, year] = np.isnan(image_y)
 
 
     #Smoothing and thresholding
@@ -745,6 +749,7 @@ def velocity(region_id):
 
             prova = velocity_multi_and_single_x.loc[id, year]
             prova[green_and_multi.loc[id, year]] = np.nan
+            velocity_x_tif_nan.loc[id, year][green_and_multi.loc[id, year]] = True
 
             #Inserting manually the boarders for Thwaites
             if region_id == 24:
@@ -765,6 +770,7 @@ def velocity(region_id):
 
             prova = velocity_multi_and_single_y.loc[id, year]
             prova[green_and_multi.loc[id, year]] = np.nan
+            velocity_y_tif_nan.loc[id, year][green_and_multi.loc[id, year]] = True
 
             if region_id == 24:
                 prova[thwaites_boarders.loc[id,year]] = thwaites_boarders_average_y.loc[id, year]
@@ -814,6 +820,7 @@ def velocity(region_id):
             prova[thwaites_boarders.loc[id,year]] = interpo_th_x[i]
 
             mask_nan = np.isnan(prova)
+            velocity_x_tif_nan.loc[id, year][mask_nan] = True
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
             prova[sea_mask.loc[id, year]] = np.nan
 
@@ -831,6 +838,7 @@ def velocity(region_id):
                 prova[thwaites_boarders.loc[id,year]] = interpo_th_y[i]
 
             mask_nan = np.isnan(prova)
+            velocity_y_tif_nan.loc[id, year][mask_nan] = True
             prova = inpaint.inpaint_biharmonic(prova, mask_nan)
             prova[sea_mask.loc[id, year]] = np.nan
 
@@ -850,16 +858,23 @@ def velocity(region_id):
             v_x_final_3.loc[id, year] = v_x_final.loc[id, year]
             v_y_final_3.loc[id, year] = v_y_final.loc[id, year]
 
+
+
             if region_id == 24: #specific condition for Pine Island
                 if year == 2011 or year == 2012 or year == 2013:
+
                     v_x_final_3.loc[id, year] = v_x_final_2.loc[id, year]
                     v_y_final_3.loc[id, year] = v_y_final_2.loc[id, year]
+
 
     for id in df.index:
         for year in common_years:
     
                 v_x_final_3.loc[id, year][sea_mask.loc[id, year]] = 0
                 v_y_final_3.loc[id, year][sea_mask.loc[id, year]] = 0  
+
+                velocity_x_tif_nan.loc[id, year][sea_mask.loc[id,year]] = False
+                velocity_y_tif_nan.loc[id, year][sea_mask.loc[id,year]] = False
 
     velocity = pd.DataFrame(index = df.index, columns = common_years)
 
@@ -870,11 +885,15 @@ def velocity(region_id):
     ####################################################################
             
     #Saving the dataset as a npy file
-    saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
+    saving_directory = '/bettik/moncadaf/dataset/produced_data/velocity/'
 
     np.save(saving_directory + 'v_region_' + str(region_id) + '.npy', velocity)
     np.save(saving_directory + 'v_x_region_' + str(region_id) + '.npy', v_x_final_3)
     np.save(saving_directory + 'v_y_region_' + str(region_id) + '.npy', v_y_final_3)
+
+    saving_directory_nan = '/bettik/moncadaf/dataset/produced_data/interpolated_areas/velocity/'
+    np.save(saving_directory_nan + 'v_x_nan_region_' + str(region_id) + '.npy', velocity_x_tif_nan)
+    np.save(saving_directory_nan + 'v_y_nan_region_' + str(region_id) + '.npy', velocity_y_tif_nan)
 
     print('Region', region_id, 'saved for ice velocity')
 

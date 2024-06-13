@@ -32,7 +32,7 @@ common_years = np.arange(2005,2017)
 def thickness(region_id):
 
     # read shapefile
-    shape_file = '/bettik/moncadaf/data/shapefiles_antarctica/squares.shp.gpkg'
+    shape_file = '/bettik/moncadaf/dataset/squares.shp.gpkg'
     df = read_shapefile(shape_file, region_id)
 
 
@@ -40,16 +40,18 @@ def thickness(region_id):
     importlib.reload(functions)  # Reload the module
     from functions import load_masks
 
-    cnn_dataset_directory = '/bettik/moncadaf/data/masks/'
+    cnn_dataset_directory = '/bettik/moncadaf/dataset/produced_data/masks/'
     ice_mask, land_mask, sea_mask, grounded_ice_mask, boarders_mask = load_masks(cnn_dataset_directory, df, common_years)
 
 
     #need to create the list of tif files
 
-    root = '/bettik/moncadaf/data/ice_thickness/thickness_'
+    root = '/bettik/moncadaf/dataset/raw_data/thickness/thickness_'
     end = '_warp_ps.tif'
 
     thickness_paolo = pd.DataFrame(index = df.index, columns = common_years)
+    thickness_nan = pd.DataFrame(index = df.index, columns = common_years)
+
     percentile_value = 30
 
     for year in common_years:
@@ -59,6 +61,8 @@ def thickness(region_id):
                 xmin, ymin, xmax, ymax = df['boundaries'].loc[id]
                 window = rasterio.windows.from_bounds(xmin, ymin, xmax, ymax, src.transform)
                 image = src.read(1, window=window)
+
+                thickness_nan.loc[id,year] = ice_mask.loc[id, year] * np.isnan(image)
 
                 thickness_paolo_tmp = np.zeros_like(image, dtype=float)
                 thickness_paolo_tmp = image
@@ -124,7 +128,7 @@ def thickness(region_id):
 
 
     #Save the interpolated values
-    saving_directory = '/bettik/moncadaf/data/outputs/machine_learning_calving_project/cnn_dataset/'
+    saving_directory = '/bettik/moncadaf/dataset/produced_data/thickness/'
 
 
     np.save(saving_directory + f'thickness_region_{region_id}.npy', thickness_tif_interpolated_cnn_2)
