@@ -27,7 +27,7 @@ In this directory is stored the code to create the dataset.
   - Each of those file collects and interpolates its respectively variable. More infos about how datas are merged and about the tecnique adopted for interpolation are reported as comments in each file
   - Requires the shapefile with the locations of the regions and the TIFF files containing the yearly variable data for the entire Antarctic data.
   - 
-  - - **[mask_dataset.py](mask_dataset.py)**:
+- **[mask_dataset.py](mask_dataset.py)**:
   - It creates the masks which contains the regional information of the region, basically if a pixel is part of the floating ice, grounded ice, land or sea. Those masks are the same of the one created by [creating_mask.py](creating_mask.py), but saved in a way that is easier to use the data to create the final netcdf files.
  
 
