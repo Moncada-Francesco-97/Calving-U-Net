@@ -1,7 +1,21 @@
+# U-Net architecture
 
+This directory contains the code used to create, train, and test a Convolutional Neural Network (CNN) using the U-Net architecture with attention blocks. The operations are performed on the prepared dataset. The code is structured to train five different models, each trained on a different subset of the training set derived from a cross-validation procedure.
 
-In this directory is stored the code we used to create, train and test a Convolutional Network [u-net](https://arxiv.org/pdf/1505.04597) architecture, with the implementation of attention blocks. All those operation were made on the prepared dataset. The code is structured to train 5 different models, which train on 5 different subsets of the training set derived by cross-validation procedure. The training dataset was divided according to the block strategy recomanded by [Roberts (2016)](https://www.researchgate.net/publication/311523792_Cross-validation_strategies_for_data_with_temporal_spatial_hierarchical_or_phylogenetic_structure), and we decided to opt for a temporal division (we kept aside as a testing dataset 2 years for each ice shelf), but the in the [functions_architecture.py](functions_architecture.py) is stored also a function to divide dataset to preserve spatial variability.
+### Training Strategy
 
-In [functions_architecture.py](functions_architecture.py) are stored the functions used to properly load the dataset, the implementation of the personalised loss function, which is based on [dice loss](https://dev.to/_aadidev/3-common-loss-functions-for-image-segmentation-545o) function, and the architecture of the model itself.
+The training dataset was divided according to the block strategy recommended by [Roberts (2016)](https://www.researchgate.net/publication/311523792_Cross-validation_strategies_for_data_with_temporal_spatial_hierarchical_or_phylogenetic_structure) for cross-validation. We opted for a temporal division, setting aside two years for each ice shelf as a testing dataset. Additionally, the [functions_architecture.py](functions_architecture.py) file includes a function to divide the dataset to preserve spatial variability.
 
-In [u_net.py](u_net.py) is performed cross validation, training and  model initialisation. In this file is possible to set all model hyper-parameters.
+### File Descriptions
+
+- **[functions_architecture.py](functions_architecture.py)**:
+  - Contains functions to properly load the dataset.
+  - Implements a personalized loss function based on the Dice loss function.
+  - Defines the architecture of the U-Net model with attention blocks.
+
+- **[u_net.py](u_net.py)**:
+  - Performs cross-validation, training, and model initialization.
+  - Allows setting of all model hyperparameters.
+
+- **[conda_environment.txt](conda_environment.txt)**:
+  - Contains the conda environment specifications used to develop the code.
